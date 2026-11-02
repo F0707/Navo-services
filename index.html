@@ -177,6 +177,24 @@ function navoRegisterPage(){
  entry.price=Math.min(...Object.values(serviceData).map(x=>x.price));
  try{localStorage.setItem('navo-worker-services-'+workerId,JSON.stringify(serviceData));salons.push(entry);navoStaff[id]=[{id:workerId,name:entry.master}];navoOwn.push(entry);localStorage.setItem(navoOwnKey,JSON.stringify(navoOwn));localStorage.setItem('navo-master-address-v1',JSON.stringify({...JSON.parse(localStorage.getItem('navo-master-address-v1')||'{}'),[id+'::'+workerId]:{city:v('area'),street:v('street'),landmark:v('landmark'),details:''}}));}catch(err){alert('Не удалось сохранить профиль. Проверьте разрешение браузера на сохранение данных.');return}
  if(!localStorage.getItem(navoMasterBoundKey))localStorage.setItem(navoMasterBoundKey,String(id));localStorage.setItem(navoMasterLoggedKey,'yes');view='master';region='';area='';query='';filter='all';render();toast('Профиль '+entry.master+' сохранён! Карточка теперь в каталоге.');window.scrollTo(0,0);
+ // Publish a new master's public directory profile only with an authenticated account.
+ // Keep the local copy intact if the network or permission check fails.
+ (async()=>{
+  try{
+   const auth=JSON.parse(sessionStorage.getItem('navo-auth-session-v43')||'null');
+   if(!auth?.access_token)return;
+   const root='https://wvixivswjqxyunpoiqrl.supabase.co';
+   const apikey='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP';
+   const who=await fetch(root+'/auth/v1/user',{headers:{apikey,Authorization:'Bearer '+auth.access_token}});
+   if(!who.ok)throw Error('Сессия истекла');
+   const user=await who.json();
+   if(!user?.id)throw Error('Аккаунт не найден');
+   const profile={user_id:user.id,display_name:entry.master,salon_name:entry.name,phone:entry.phone||null,city:entry.area||null,work_address:entry.address||null,landmark:entry.landmark||null};
+   const response=await fetch(root+'/rest/v1/master_profiles',{method:'POST',headers:{apikey,Authorization:'Bearer '+auth.access_token,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(profile)});
+   if(!response.ok){if(response.status===409){toast('Локальный профиль сохранён. В облаке у аккаунта уже есть профиль мастера.');return;}throw Error('Ошибка '+response.status);}
+   toast('✓ Профиль мастера опубликован в облачном каталоге NAVO.');
+  }catch(e){toast('Профиль сохранён на устройстве. Облачная публикация не удалась: '+e.message);}
+ })();
  };
 }
 
