@@ -542,11 +542,11 @@ more.onclick=()=>load(true);
 <div id="nv42-overlay" hidden><section id="nv42-dialog" role="dialog" aria-modal="true" aria-label="Вход NAVO">
 <h2>🔐 Вход NAVO</h2><p>Один аккаунт для клиента и мастера. Сейчас это проверка облачной авторизации; существующие локальные записи пока не синхронизируются.</p>
 <div id="nv42-signed-out"><label for="nv42-email">Электронная почта</label><input id="nv42-email" type="email" autocomplete="email" placeholder="name@example.com">
-<button id="nv42-send" type="button">Отправить код</button><label for="nv42-code">Шестизначный код из письма</label><input id="nv42-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+<button id="nv42-send" type="button">Отправить ссылку для входа</button><label for="nv42-code">Шестизначный код из письма</label><input id="nv42-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
 <button id="nv42-verify" type="button">Подтвердить код</button></div>
 <div id="nv42-signed-in" hidden><p id="nv42-account"></p><button type="button" id="nv42-logout">Выйти</button></div>
 <p id="nv42-message" role="status" aria-live="polite"></p>
-<p>Если вместо кода приходит ссылка, в Supabase необходимо настроить шаблон письма с <code>{{ .Token }}</code>. До настройки почты вход по коду может не работать.</p>
+<p>Сейчас вход работает через ссылку из Gmail. Используйте самое новое письмо и открывайте ссылку один раз. Вход по шестизначному коду станет доступен после настройки почтового шаблона Supabase.</p>
 <button class="nv42-light" type="button" id="nv42-close">Закрыть</button>
 </section></div>
 <script>
@@ -556,6 +556,7 @@ const root='https://wvixivswjqxyunpoiqrl.supabase.co';
 const apikey='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP';
 const $=id=>document.getElementById(id), overlay=$('nv42-overlay'), msg=$('nv42-message');
 let session=null, busy=false;
+try{const saved=JSON.parse(sessionStorage.getItem('navo-auth-session-v43')||'null');if(saved?.access_token&&saved?.expires_at>Date.now())session=saved;}catch(e){}
 function show(){overlay.hidden=false;render();}
 function hide(){overlay.hidden=true;}
 function note(s){msg.textContent=s;}
@@ -571,15 +572,15 @@ overlay.addEventListener('click',e=>{if(e.target===overlay)hide();});
 $('nv42-send').addEventListener('click',async()=>{if(busy)return;const email=$('nv42-email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){note('Введите правильный email.');return;}
 setBusy(true);note('Отправляем письмо…');try{await request('/auth/v1/otp?redirect_to='+encodeURIComponent(location.origin+location.pathname),{email,create_user:true});note('Письмо отправлено. Откройте ссылку Sign in из Gmail, чтобы войти в NAVO.');}catch(e){note('Не удалось отправить письмо: '+e.message);}finally{setBusy(false);}});
 $('nv42-verify').addEventListener('click',async()=>{if(busy)return;const email=$('nv42-email').value.trim(),token=$('nv42-code').value.trim();if(!/^\d{6}$/.test(token)){note('Введите шестизначный код.');return;}
-setBusy(true);note('Проверяем код…');try{const result=await request('/auth/v1/verify',{email,token,type:'email'});if(!result.access_token)throw new Error('Сервер не вернул сессию');session=result;render();note('Авторизация успешна. Облачные записи будут подключены на следующем этапе.');}catch(e){note('Код не подтверждён: '+e.message);}finally{setBusy(false);}});
+setBusy(true);note('Проверяем код…');try{const result=await request('/auth/v1/verify',{email,token,type:'email'});if(!result.access_token)throw new Error('Сервер не вернул сессию');session=result;session.expires_at=Date.now()+(Number(result.expires_in)||3600)*1000;sessionStorage.setItem('navo-auth-session-v43',JSON.stringify(session));render();note('Авторизация успешна. Облачные записи будут подключены на следующем этапе.');}catch(e){note('Код не подтверждён: '+e.message);}finally{setBusy(false);}});
 $('nv42-logout').addEventListener('click',async()=>{if(session?.access_token){try{await request('/auth/v1/logout',{},session.access_token);}catch(e){/* clear local session even if remote signout fails */}}
-session=null;$('nv42-code').value='';render();note('Вы вышли из аккаунта.');});
+session=null;sessionStorage.removeItem('navo-auth-session-v43');$('nv42-code').value='';render();note('Вы вышли из аккаунта.');});
 // Supabase magic-link callback: capture tokens only on the configured HTTPS site.
 try {
  const params=new URLSearchParams(location.hash.replace(/^#/,''));
  const access=params.get('access_token'), refresh=params.get('refresh_token');
  if(access && refresh && params.get('token_type')==='bearer') {
-   session={access_token:access,refresh_token:refresh,token_type:'bearer'};
+   session={access_token:access,refresh_token:refresh,token_type:'bearer',expires_at:Date.now()+3600*1000};sessionStorage.setItem('navo-auth-session-v43',JSON.stringify(session));
    history.replaceState(null,'',location.pathname+location.search);
    fetch(root+'/auth/v1/user',{headers:{apikey,Authorization:'Bearer '+access}})
      .then(r=>r.ok?r.json():null).then(user=>{if(user){session.user=user;render();show();note('Вход через Gmail выполнен.');}})
@@ -587,7 +588,7 @@ try {
  } else if(params.get('error_description')) {
    const error=params.get('error_description');
    history.replaceState(null,'',location.pathname+location.search);
-   show();note('Ошибка входа: '+error);
+   show();note('Ошибка входа: '+error+(params.get('error_code')==='otp_expired'||/expired|invalid/i.test(error)?' Откройте NAVO, отправьте новое письмо и используйте только самую свежую ссылку.':'');
  }
 } catch(e) { /* keep local demo available */ }
 render();
