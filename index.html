@@ -591,7 +591,26 @@ const root='https://wvixivswjqxyunpoiqrl.supabase.co';
 const apikey='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP';
 const $=id=>document.getElementById(id), overlay=$('nv42-overlay'), msg=$('nv42-message');
 let session=null, busy=false;
-try{const saved=JSON.parse(sessionStorage.getItem('navo-auth-session-v43')||'null');if(saved?.access_token&&saved?.expires_at>Date.now())session=saved;}catch(e){}
+const AUTH_KEY='navo-auth-session-v43';
+function saveSession(s){session=s; if(s){localStorage.setItem(AUTH_KEY,JSON.stringify(s));sessionStorage.setItem(AUTH_KEY,JSON.stringify(s));}else{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY);}}
+try{const saved=JSON.parse(localStorage.getItem(AUTH_KEY)||sessionStorage.getItem(AUTH_KEY)||'null');if(saved?.refresh_token){saveSession(saved);}}catch(e){}
+let refreshPromise=null;
+async function refreshSession(){
+ if(!session?.refresh_token)return false;
+ if(refreshPromise)return refreshPromise;
+ refreshPromise=(async()=>{try{
+  const response=await fetch(root+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})});
+  if(!response.ok){if(response.status===400||response.status===401)saveSession(null);return false;}
+  const updated=await response.json();if(!updated.access_token||!updated.refresh_token)return false;
+  saveSession({...session,...updated,expires_at:Date.now()+(Number(updated.expires_in)||3600)*1000});render();return true;
+ }catch(e){return false;}finally{refreshPromise=null;}})();
+ return refreshPromise;
+}
+async function ensureSession(){if(!session?.access_token)return false;if((session.expires_at||0)-Date.now()<120000)return refreshSession();return true;}
+if(session){renderAfterStartup();}
+async function renderAfterStartup(){if((session.expires_at||0)-Date.now()<120000)await refreshSession();render();}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)ensureSession().then(render);});
+setInterval(()=>{if(!document.hidden)ensureSession().then(render);},60000);
 function show(){overlay.hidden=false;render();}
 function hide(){overlay.hidden=true;}
 function note(s){msg.textContent=s;}
@@ -602,19 +621,19 @@ async function request(path,body,token){const controller=new AbortController(),t
 try{const response=await fetch(root+path,{method:'POST',headers:{'apikey':apikey,'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},body:JSON.stringify(body),signal:controller.signal});
 const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.msg||data.error_description||data.message||'Ошибка '+response.status);return data;
 }finally{clearTimeout(timer);}}
-$('nv44-refresh').addEventListener('click',async()=>{const out=$('nv44-bookings'),btn=$('nv44-refresh');if(!session?.access_token){out.textContent='Сначала войдите в NAVO.';return;}btn.disabled=true;out.textContent='Загружаем записи из Supabase…';try{const res=await fetch(root+'/rest/v1/bookings?select=id,starts_at,status,total_somoni,master_id,client_id&order=starts_at.desc&limit=50',{headers:{apikey,Authorization:'Bearer '+session.access_token}});const data=await res.json();if(!res.ok)throw Error(data.message||'Ошибка '+res.status);out.replaceChildren();if(!data.length){out.textContent='Облачных записей пока нет. Местные тестовые записи сохранены отдельно.';}else{const heading=document.createElement('p');heading.textContent='Найдено записей: '+data.length;out.append(heading);for(const b of data){const p=document.createElement('p');p.style.borderTop='1px solid #cbdacb';p.style.paddingTop='7px';const when=new Date(b.starts_at);p.textContent=(Number.isNaN(when.getTime())?'Дата не указана':when.toLocaleString('ru-RU',{timeZone:'Asia/Dushanbe'}))+' · '+b.status+' · '+b.total_somoni+' сомони';out.append(p);}}}catch(e){out.textContent='Не удалось загрузить: '+e.message;}finally{btn.disabled=false;}});
+$('nv44-refresh').addEventListener('click',async()=>{const out=$('nv44-bookings'),btn=$('nv44-refresh');if(!await ensureSession()){out.textContent='Сначала войдите в NAVO.';return;}btn.disabled=true;out.textContent='Загружаем записи из Supabase…';try{const res=await fetch(root+'/rest/v1/bookings?select=id,starts_at,status,total_somoni,master_id,client_id&order=starts_at.desc&limit=50',{headers:{apikey,Authorization:'Bearer '+session.access_token}});const data=await res.json();if(!res.ok)throw Error(data.message||'Ошибка '+res.status);out.replaceChildren();if(!data.length){out.textContent='Облачных записей пока нет. Местные тестовые записи сохранены отдельно.';}else{const heading=document.createElement('p');heading.textContent='Найдено записей: '+data.length;out.append(heading);for(const b of data){const p=document.createElement('p');p.style.borderTop='1px solid #cbdacb';p.style.paddingTop='7px';const when=new Date(b.starts_at);p.textContent=(Number.isNaN(when.getTime())?'Дата не указана':when.toLocaleString('ru-RU',{timeZone:'Asia/Dushanbe'}))+' · '+b.status+' · '+b.total_somoni+' сомони';out.append(p);}}}catch(e){out.textContent='Не удалось загрузить: '+e.message;}finally{btn.disabled=false;}});
 $('nv42-launch').addEventListener('click',show);$('nv42-close').addEventListener('click',hide);
 overlay.addEventListener('click',e=>{if(e.target===overlay)hide();});
 $('nv42-send').addEventListener('click',async()=>{if(busy)return;const email=$('nv42-email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){note('Введите правильный email.');return;}
 setBusy(true);note('Отправляем письмо…');try{await request('/auth/v1/otp?redirect_to='+encodeURIComponent(location.origin+location.pathname),{email,create_user:true});note('Письмо отправлено. Откройте ссылку Sign in из Gmail, чтобы войти в NAVO.');}catch(e){note('Не удалось отправить письмо: '+e.message);}finally{setBusy(false);}});
 $('nv42-verify').addEventListener('click',async()=>{if(busy)return;const email=$('nv42-email').value.trim(),token=$('nv42-code').value.trim();if(!/^\d{6}$/.test(token)){note('Введите шестизначный код.');return;}
-setBusy(true);note('Проверяем код…');try{const result=await request('/auth/v1/verify',{email,token,type:'email'});if(!result.access_token)throw new Error('Сервер не вернул сессию');session=result;session.expires_at=Date.now()+(Number(result.expires_in)||3600)*1000;sessionStorage.setItem('navo-auth-session-v43',JSON.stringify(session));render();note('Авторизация успешна. Облачные записи будут подключены на следующем этапе.');}catch(e){note('Код не подтверждён: '+e.message);}finally{setBusy(false);}});
+setBusy(true);note('Проверяем код…');try{const result=await request('/auth/v1/verify',{email,token,type:'email'});if(!result.access_token)throw new Error('Сервер не вернул сессию');session=result;session.expires_at=Date.now()+(Number(result.expires_in)||3600)*1000;saveSession(session);render();note('Авторизация успешна. Облачные записи будут подключены на следующем этапе.');}catch(e){note('Код не подтверждён: '+e.message);}finally{setBusy(false);}});
 $('nv42-publish').addEventListener('click',async()=>{
  const btn=$('nv42-publish');if(busy)return;
  let local=[];try{local=JSON.parse(localStorage.getItem('navo-selfregistered-v1')||'[]');}catch(e){}
  if(!Array.isArray(local)||!local.length){note('На этом устройстве нет зарегистрированного мастера. Сначала создайте профиль через «Я новый мастер».');return;}
  if(local.length!==1){note('Найдено несколько местных профилей. Автоматическая публикация отключена, чтобы не заменить чужие данные.');return;}
- if(!session?.access_token){note('Сначала войдите в NAVO.');return;}
+ if(!await ensureSession()){note('Сначала войдите в NAVO.');return;}
  btn.disabled=true;note('Проверяем профиль в облаке…');
  try{
   const headers={apikey,Authorization:'Bearer '+session.access_token};
@@ -633,16 +652,16 @@ $('nv42-publish').addEventListener('click',async()=>{
  }catch(e){note('Публикация не выполнена: '+e.message);}finally{btn.disabled=false;}
 });
 $('nv42-logout').addEventListener('click',async()=>{if(session?.access_token){try{await request('/auth/v1/logout',{},session.access_token);}catch(e){/* clear local session even if remote signout fails */}}
-session=null;sessionStorage.removeItem('navo-auth-session-v43');$('nv42-code').value='';render();note('Вы вышли из аккаунта.');});
+saveSession(null);$('nv42-code').value='';render();note('Вы вышли из аккаунта.');});
 // Supabase magic-link callback: capture tokens only on the configured HTTPS site.
 try {
  const params=new URLSearchParams(location.hash.replace(/^#/,''));
  const access=params.get('access_token'), refresh=params.get('refresh_token');
  if(access && refresh && params.get('token_type')==='bearer') {
-   session={access_token:access,refresh_token:refresh,token_type:'bearer',expires_at:Date.now()+3600*1000};sessionStorage.setItem('navo-auth-session-v43',JSON.stringify(session));
+   saveSession({access_token:access,refresh_token:refresh,token_type:'bearer',expires_at:Date.now()+(Number(params.get('expires_in'))||3600)*1000});
    history.replaceState(null,'',location.pathname+location.search);
    fetch(root+'/auth/v1/user',{headers:{apikey,Authorization:'Bearer '+access}})
-     .then(r=>r.ok?r.json():null).then(user=>{if(user){session.user=user;sessionStorage.setItem('navo-auth-session-v43',JSON.stringify(session));render();show();note('Вход через Gmail выполнен. Кнопка публикации находится над кнопкой «Выйти».');}})
+     .then(r=>r.ok?r.json():null).then(user=>{if(user){session.user=user;saveSession(session);render();show();note('Вход через Gmail выполнен. Кнопка публикации находится над кнопкой «Выйти».');}})
      .catch(()=>{render();show();note('Ссылка открыта, но данные профиля не получены.');});
  } else if(params.get('error_description')) {
    const error=params.get('error_description');
@@ -666,7 +685,7 @@ render();
 const root='https://wvixivswjqxyunpoiqrl.supabase.co', key='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP';
 const results=document.getElementById('nv38-results'),dialog=document.getElementById('nv45-dialog');
 const message=document.getElementById('nv45-message');let target=null;
-function session(){try{const s=JSON.parse(sessionStorage.getItem('navo-auth-session-v43')||'null');return s?.access_token&&s.expires_at>Date.now()?s:null;}catch{return null;}}
+function session(){try{const s=JSON.parse(localStorage.getItem('navo-auth-session-v43')||sessionStorage.getItem('navo-auth-session-v43')||'null');return s?.access_token&&s.expires_at>Date.now()?s:null;}catch{return null;}}
 async function api(path,method,body,token){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);try{const r=await fetch(root+'/rest/v1/'+path,{method,headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:method==='POST'&&path.startsWith('client_profiles?')?'resolution=merge-duplicates,return=minimal':'return=minimal'},body:body?JSON.stringify(body):undefined,signal:controller.signal});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.message||e.details||'HTTP '+r.status);}return r;}finally{clearTimeout(timer);}}
 function decorate(){const items=results.querySelectorAll('.nv38-item');for(const item of items){if(item.querySelector('.nv45-request'))continue;const btn=document.createElement('button');btn.type='button';btn.className='nv45-request';btn.textContent='☁ Запросить запись';btn.onclick=()=>{const index=Array.from(results.querySelectorAll('.nv38-item')).indexOf(item);const name=item.querySelector('strong')?.textContent||'Мастер';const all=Array.from(results.querySelectorAll('.nv38-item'));const targetName=all[index]?.querySelector('strong')?.textContent;target={name:targetName,id:item.dataset.masterId||null};message.textContent='';dialog.hidden=false;document.getElementById('nv45-master').textContent='Мастер: '+name;document.getElementById('nv45-when').min=new Date(Date.now()+3600000).toISOString().slice(0,16);};item.appendChild(btn);}}
 const observer=new MutationObserver(decorate);observer.observe(results,{childList:true});decorate();
