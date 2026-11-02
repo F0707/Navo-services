@@ -181,7 +181,7 @@ function navoRegisterPage(){
  // Keep the local copy intact if the network or permission check fails.
  (async()=>{
   try{
-   const auth=JSON.parse(sessionStorage.getItem('navo-auth-session-v43')||'null');
+   const auth=JSON.parse(localStorage.getItem('navo-auth-session-v43')||sessionStorage.getItem('navo-auth-session-v43')||'null');
    if(!auth?.access_token)return;
    const root='https://wvixivswjqxyunpoiqrl.supabase.co';
    const apikey='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP';
@@ -608,7 +608,7 @@ async function refreshSession(){
 }
 async function ensureSession(){if(!session?.access_token)return false;if((session.expires_at||0)-Date.now()<120000)return refreshSession();return true;}
 if(session){renderAfterStartup();}
-async function renderAfterStartup(){if((session.expires_at||0)-Date.now()<120000)await refreshSession();render();}
+async function renderAfterStartup(){if((session.expires_at||0)-Date.now()<120000)await refreshSession();if(session?.access_token&&!session.user){try{const r=await fetch(root+'/auth/v1/user',{headers:{apikey,Authorization:'Bearer '+session.access_token}});if(r.ok){session.user=await r.json();saveSession(session);}}catch(e){}}render();}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)ensureSession().then(render);});
 setInterval(()=>{if(!document.hidden)ensureSession().then(render);},60000);
 function show(){overlay.hidden=false;render();}
