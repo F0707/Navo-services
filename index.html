@@ -710,14 +710,14 @@ if(!s){
  const start=new Date(value+':00+05:00');if(!Number.isFinite(start.getTime())||start.getTime()<=Date.now()+300000)throw Error('Выберите будущее время по Душанбе');
  const response=await fetch(root+'/functions/v1/navo-guest-booking',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({name:first,phone,master_id:masterId,starts_at:start.toISOString()})});
  const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw Error(data.error||'Ошибка отправки');
- message.textContent='✓ Заявка отправлена мастеру! Ожидайте подтверждения по телефону.';btn.textContent='Заявка отправлена';return;
+ dialog.hidden=true;btn.textContent='Заявка отправлена';alert('✓ Заявка отправлена мастеру! Ожидайте подтверждения по телефону.');return;
 }
 const who=await fetch(root+'/auth/v1/user',{headers:{apikey:key,Authorization:'Bearer '+s.access_token}});if(!who.ok)throw Error('Вход устарел. Войдите повторно.');const user=await who.json();
 const first=document.getElementById('nv45-name').value.trim(),phone=document.getElementById('nv45-phone').value.trim();const value=document.getElementById('nv45-when').value;if(!first||!value)throw Error('Заполните имя и время');
 const start=new Date(value+':00+05:00');if(!Number.isFinite(start.getTime())||start.getTime()<=Date.now())throw Error('Выберите будущее время по Душанбе');
 await api('client_profiles?on_conflict=user_id','POST',{user_id:user.id,first_name:first,phone:phone||null},s.access_token);
 await api('bookings','POST',{client_id:user.id,master_id:masterId,starts_at:start.toISOString(),status:'requested',client_phone:phone||null,total_somoni:0},s.access_token);
-message.textContent='✓ Заявка сохранена в облаке! Она появится у вас и у мастера в облачных записях. Ожидайте согласования времени и стоимости.';
+dialog.hidden=true;btn.textContent='Заявка отправлена';alert('✓ Заявка отправлена мастеру! Ожидайте подтверждения времени и стоимости.');
 }catch(err){message.textContent='Заявка не отправлена: '+err.message;}finally{if(btn.textContent!=='Заявка отправлена')btn.disabled=false;}};
 })();
 </script>
