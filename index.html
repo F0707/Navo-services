@@ -643,7 +643,7 @@ setBusy(true);note('Проверяем код…');try{const result=await reques
 $('nv42-publish').addEventListener('click',async()=>{
  const btn=$('nv42-publish');if(busy)return;
  let local=[];try{local=JSON.parse(localStorage.getItem('navo-selfregistered-v1')||'[]');}catch(e){}
- if(!Array.isArray(local)||!local.length){note('На этом устройстве нет зарегистрированного мастера. Сначала создайте профиль через «Я новый мастер».');return;}
+ if(!Array.isArray(local)||!local.length){if(!await ensureSession()){note('Войдите в аккаунт мастера, чтобы открыть уже созданный профиль. Новую анкету заполнять не нужно.');return;}try{const me=await fetch(root+'/auth/v1/user',{headers:{apikey,Authorization:'Bearer '+session.access_token}}).then(r=>r.ok?r.json():null);if(me?.id){const res=await fetch(root+'/rest/v1/master_profiles?select=user_id,display_name,salon_name&user_id=eq.'+encodeURIComponent(me.id),{headers:{apikey,Authorization:'Bearer '+session.access_token}});if(res.ok){const found=await res.json();if(found.length){note('✓ Ваш мастер '+found[0].display_name+' уже зарегистрирован в NAVO. Откройте «Заявки без регистрации» в этом кабинете.');return;}}}}catch(e){}note('Облачный профиль не найден. Если вы новый мастер, используйте «Я новый мастер».');return;}
  if(local.length!==1){note('Найдено несколько местных профилей. Автоматическая публикация отключена, чтобы не заменить чужие данные.');return;}
  if(!await ensureSession()){note('Сначала войдите в NAVO.');return;}
  btn.disabled=true;note('Проверяем профиль в облаке…');
@@ -655,7 +655,7 @@ $('nv42-publish').addEventListener('click',async()=>{
   const exists=await fetch(root+'/rest/v1/master_profiles?select=user_id&user_id=eq.'+encodeURIComponent(user.id),{headers});
   if(!exists.ok)throw Error('Не удалось проверить облачный профиль: '+exists.status);
   const records=await exists.json();
-  if(records.length){note('В облаке уже существует профиль мастера этого аккаунта. Он не изменён, чтобы избежать потери данных.');return;}
+  if(records.length){note('✓ Ваш профиль мастера уже сохранён в облаке. Повторная регистрация не нужна. Ниже откройте «Заявки без регистрации», чтобы посмотреть обращения клиентов.');return;}
   const e=local[0];
   const profile={user_id:user.id,display_name:e.master||'Мастер',salon_name:e.name||null,phone:e.phone||null,city:e.area||null,work_address:e.address||null,landmark:e.landmark||null};
   const result=await fetch(root+'/rest/v1/master_profiles',{method:'POST',headers:{...headers,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(profile)});
