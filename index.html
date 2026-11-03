@@ -502,7 +502,7 @@ file.onchange=async()=>{
 #nv38-panel .nv38-item{padding:10px 0;border-bottom:1px solid #ddd}
 #nv38-panel .nv38-muted{color:#59636c}
 </style>
-<button type="button" id="nv38-open">☁ Мастера онлайн</button>
+
 <div id="nv38-modal" role="dialog" aria-modal="true" aria-label="Каталог мастеров Supabase"><section id="nv38-panel">
 <h2>☁ Каталог мастеров NAVO</h2>
 <p class="nv38-muted">Публичные профили из Supabase. Здесь нет личных телефонов и кошельков. Локальные тестовые мастера остаются в основном интерфейсе.</p>
@@ -524,7 +524,7 @@ const search=document.getElementById('nv39-search');
 const city=document.getElementById('nv39-city');
 const pageSize=50;
 let rows=[],offset=0,hasMore=false,requestId=0,controller=null,debounce=null;
-document.getElementById('nv38-open').onclick=()=>{modal.style.display='flex';load(false);};
+
 document.getElementById('nv38-close').onclick=()=>{modal.style.display='none';controller?.abort();};
 modal.addEventListener('click',e=>{if(e.target===modal){modal.style.display='none';controller?.abort();}});
 function safeTerm(value){return value.trim().replace(/[%,().*]/g,' ').replace(/\s+/g,' ').slice(0,80);}
