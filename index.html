@@ -592,23 +592,32 @@ const apikey='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP';
 const $=id=>document.getElementById(id), overlay=$('nv42-overlay'), msg=$('nv42-message');
 let session=null, busy=false;
 const AUTH_KEY='navo-auth-session-v43';
-function saveSession(s){session=s; if(s){localStorage.setItem(AUTH_KEY,JSON.stringify(s));sessionStorage.setItem(AUTH_KEY,JSON.stringify(s));}else{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY);}}
-try{const saved=JSON.parse(localStorage.getItem(AUTH_KEY)||sessionStorage.getItem(AUTH_KEY)||'null');if(saved?.refresh_token){saveSession(saved);}}catch(e){}
+function readSession(){try{const a=JSON.parse(localStorage.getItem(AUTH_KEY)||'null'),b=JSON.parse(sessionStorage.getItem(AUTH_KEY)||'null');return [a,b].filter(s=>s?.refresh_token).sort((x,y)=>(y.expires_at||0)-(x.expires_at||0))[0]||null;}catch(e){return null;}}
+function saveSession(s){session=s;if(s){const v=JSON.stringify(s);localStorage.setItem(AUTH_KEY,v);sessionStorage.setItem(AUTH_KEY,v);}else{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY);}}
+session=readSession();
 let refreshPromise=null;
 async function refreshSession(){
- if(!session?.refresh_token)return false;
  if(refreshPromise)return refreshPromise;
- refreshPromise=(async()=>{try{
-  const response=await fetch(root+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})});
-  if(!response.ok){if(response.status===400||response.status===401)saveSession(null);return false;}
-  const updated=await response.json();if(!updated.access_token||!updated.refresh_token)return false;
-  saveSession({...session,...updated,expires_at:Date.now()+(Number(updated.expires_in)||3600)*1000});render();return true;
- }catch(e){return false;}finally{refreshPromise=null;}})();
+ if(!session?.refresh_token){session=readSession();if(!session?.refresh_token)return false;}
+ const run=async()=>{
+  const current=readSession();if(current?.refresh_token&&current.refresh_token!==session?.refresh_token){session=current;render();if((session.expires_at||0)>Date.now()+120000)return true;}
+  if((session?.expires_at||0)>Date.now()+120000)return true;
+  const token=session?.refresh_token;if(!token)return false;
+  try{
+   const response=await fetch(root+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:token})});
+   if(!response.ok){const newer=readSession();if(newer?.refresh_token&&newer.refresh_token!==token){session=newer;render();return true;}return false;}
+   const updated=await response.json();if(!updated.access_token||!updated.refresh_token)return false;
+   const newer=readSession();if(newer?.refresh_token&&newer.refresh_token!==token){session=newer;render();return true;}
+   saveSession({...session,...updated,expires_at:Date.now()+(Number(updated.expires_in)||3600)*1000});render();return true;
+  }catch(e){return false;}
+ };
+ refreshPromise=(async()=>{try{return navigator.locks?.request?await navigator.locks.request('navo-auth-refresh',run):await run();}finally{refreshPromise=null;}})();
  return refreshPromise;
 }
-async function ensureSession(){if(!session?.access_token)return false;if((session.expires_at||0)-Date.now()<120000)return refreshSession();return true;}
+async function ensureSession(){if(!session?.refresh_token)session=readSession();if(!session?.refresh_token)return false;if((session.expires_at||0)-Date.now()<120000)return refreshSession();return true;}
 if(session){renderAfterStartup();}
 async function renderAfterStartup(){if((session.expires_at||0)-Date.now()<120000)await refreshSession();if(session?.access_token&&!session.user){try{const r=await fetch(root+'/auth/v1/user',{headers:{apikey,Authorization:'Bearer '+session.access_token}});if(r.ok){session.user=await r.json();saveSession(session);}}catch(e){}}render();}
+window.addEventListener('storage',e=>{if(e.key===AUTH_KEY){session=readSession();render();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)ensureSession().then(render);});
 setInterval(()=>{if(!document.hidden)ensureSession().then(render);},60000);
 function show(){overlay.hidden=false;render();}
