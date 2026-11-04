@@ -140,4 +140,4 @@ async function masterEditLoad(){
  const box=el('md-services');const rows=await request('/rest/v1/service_catalog?select=id,name,category&order=category.asc,name.asc&limit=500',null,masterSession.access_token,'GET');
  const saved=await request('/rest/v1/navo_master_prices?select=service_id,price_somoni&master_id=eq.'+encodeURIComponent(masterSession.user.id),null,masterSession.access_token,'GET');
  const prices={};for(const x of saved)prices[x.service_id]=x.price_somoni;
- groupedPricePicker(box,rows,Array.isArray(p.services)?p.services.map(Number):[],prices);>
+ groupedPricePicker(box,rows,Array.isArray(p.services)?p.services.map(Number):[],prices);
