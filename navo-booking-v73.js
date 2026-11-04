@@ -52,7 +52,7 @@ async function attachMasterCards(){
 }
 async function markChatRead(bookingId,viewerId,accessToken){
  const response=await fetch(api().ROOT+'/rest/v1/navo_message_reads?on_conflict=booking_id,user_id',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:JSON.stringify({booking_id:bookingId,user_id:viewerId,last_read_at:new Date().toISOString()})});
- if(response.ok){const dot=document.querySelector('[data-booking-card="'+bookingId+'"] [data-unread-dot]');if(dot)dot.hidden=true}
+ if(response.ok){const dot=document.querySelector('[data-booking-card="'+bookingId+'"] [data-unread-dot]');if(dot){dot.hidden=true;dot.style.display='none'}}
 }
 async function updateBookingUnread(){
  const session=api()?.getSession?.(),masterView=!!session?.access_token&&!$('ml-dashboard')?.classList.contains('hide');
@@ -65,7 +65,7 @@ async function updateBookingUnread(){
  get('/rest/v1/navo_message_reads?select=booking_id,last_read_at&user_id=eq.'+encodeURIComponent(uid),auth.access_token)]);
  const last=new Map(reads.map(x=>[x.booking_id,new Date(x.last_read_at).getTime()]));const counts=new Map();
  for(const m of msgs){if(m.sender_id!==uid&&new Date(m.created_at).getTime()>(last.get(m.booking_id)||0))counts.set(m.booking_id,(counts.get(m.booking_id)||0)+1)}
- for(const card of document.querySelectorAll('[data-booking-card]')){const count=counts.get(card.dataset.bookingCard)||0;let dot=card.querySelector('[data-unread-dot]');if(!dot){dot=document.createElement('span');dot.dataset.unreadDot='1';dot.style.cssText='display:inline-block;background:#f7c94a;color:#3a2b00;border-radius:30px;padding:5px 10px;margin:8px 0;font-weight:700';card.insertBefore(dot,card.firstChild)}dot.textContent='🟡 '+count+' новых сообщений';dot.hidden=!count}
+ for(const card of document.querySelectorAll('[data-booking-card]')){const count=counts.get(card.dataset.bookingCard)||0;let dot=card.querySelector('[data-unread-dot]');if(!dot){dot=document.createElement('span');dot.dataset.unreadDot='1';dot.style.cssText='display:inline-block;background:#f7c94a;color:#3a2b00;border-radius:30px;padding:5px 10px;margin:8px 0;font-weight:700';card.insertBefore(dot,card.firstChild)}dot.textContent='🟡 '+count+' новых сообщений';dot.hidden=!count;dot.style.display=count?'inline-block':'none'}
  const clientTab=$('tab-bookings');if(clientTab&&!masterView){const n=[...counts.values()].reduce((a,b)=>a+b,0);clientTab.textContent=n?'Мои записи 🟡 '+n:'Мои записи'}
 }
 function chatPanel(bookingId,viewerId,accessToken,active){
