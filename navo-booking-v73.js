@@ -72,7 +72,9 @@ function chatPanel(bookingId,viewerId,accessToken,active){
  wrap.append(header,info,messages,status,quick,input,send,refreshButton);if(!active){input.hidden=true;send.hidden=true;quick.hidden=true;wrap.append(text('p','Запись закрыта. Переписка доступна только для чтения.'))}
  const details=document.createElement('details');details.append(Object.assign(document.createElement('summary'),{textContent:'Открыть чат'}),wrap);details.addEventListener('toggle',()=>{if(details.open)refresh()});return details
 }
-async function clientCards(){
+let clientRenderRunning=false,clientRenderQueued=false;
+async function clientCards(){if(clientRenderRunning){clientRenderQueued=true;return}clientRenderRunning=true;try{await renderClientCards()}finally{clientRenderRunning=false;if(clientRenderQueued){clientRenderQueued=false;clientCards().catch(console.error)}}}
+async function renderClientCards(){
  const box=$('bookings-items');if(!box)return;
  const user=api().getAuth()?.user;if(!user)return;
  const rows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');
