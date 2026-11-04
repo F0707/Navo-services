@@ -88,8 +88,8 @@ function masterBookingRow(b){const d=document.createElement('div');d.className='
 async function masterBookings(){
  const uid=masterSession.user.id,token=masterSession.access_token;
  const rows=await request('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(uid)+'&order=starts_at.asc&limit=200',null,token,'GET');
- const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const dayOf=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d));
+ const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const dayOf=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d));
  const now=Date.now(),todays=rows.filter(x=>dayOf(x.starts_at)===today),future=rows.filter(x=>new Date(x.starts_at).getTime()>=now);
  for(const [kind,items] of [['today',todays],['upcoming',future]]){const list=el('md-'+kind+'-list');list.replaceChildren();mstatus('md-'+kind+'-status',items.length?'Всего записей: '+items.length:'Записей пока нет');for(const b of items)list.append(masterBookingRow(b))}
 }
