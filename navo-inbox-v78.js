@@ -28,7 +28,7 @@ async function update(render){
  const tab=$('md-tab-inbox');if(tab){tab.textContent=unread?'💬 Сообщения 🟡 '+unread:'💬 Сообщения';tab.style.border=unread?'2px solid #e3a500':''}
  let badge=$('navo-unread-banner');if(!badge){badge=document.createElement('button');badge.id='navo-unread-banner';badge.type='button';badge.className='secondary full';badge.style.margin='10px 0';dash.insertBefore(badge,dash.firstChild);badge.onclick=()=>tab?.click()}
  badge.textContent=unread?'🟡 Новые сообщения от клиентов: '+unread+' — открыть':'💬 Сообщений без ответа нет';badge.hidden=!unread;
- const panel=$('md-inbox');if(!panel||(!render&&panel.classList.contains('hide')))return;
+ const panel=$('md-inbox');if(!panel||!render)return;
  const list=$('md-inbox-list');list.replaceChildren();
  const threads=bookings.filter(b=>byBooking.has(b.id));if(!threads.length){list.append(label('p','Сообщений пока нет'));return}
  for(const b of threads){
