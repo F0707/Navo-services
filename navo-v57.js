@@ -79,10 +79,26 @@ async function openMaster(){
  try{const exists=await syncMaster();if(exists){view='master';render();}else window.navoNewMaster();}
  catch(e){alert('Не удалось загрузить профиль из Supabase: '+e.message);}
 }
+async function signOutMaster(){
+ if(!confirm('Выйти из аккаунта NAVO? При следующем входе потребуется снова подтвердить вашу личность. Профиль и почта сохранятся.'))return;
+ const current=session();
+ try{if(current?.access_token)await fetch(ROOT+'/auth/v1/logout',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+current.access_token}});}catch(e){}
+ for(const key of [AK,navoMasterLoggedKey,navoMasterBoundKey,'navo-master-email-v48','navo-master-email-v47']){
+  localStorage.removeItem(key);sessionStorage.removeItem(key);
+ }
+ sessionStorage.removeItem('nv57-visited');
+ location.replace(location.origin+location.pathname+'?v=58&logout=1');
+}
 function masterButtons(){
- const panel=document.querySelector('#app .nv23-panel');if(!panel||!panel.textContent.includes('Мой профиль'))return;
- if(!$('nv57-profile')){const b=document.createElement('button');b.id='nv57-profile';b.className='btn ghost';b.type='button';b.textContent='✎ Изменить профиль и электронную почту';b.onclick=async()=>{await openMaster();if(typeof navoEditMaster==='function'&&navoCurrentMaster())navoEditMaster();};panel.append(b);}
- if(!$('nv57-email')){const b=document.createElement('button');b.id='nv57-email';b.className='btn ghost';b.type='button';b.style.margin='8px';b.textContent='✉ Электронная почта';b.onclick=()=>window.navoEmailStep();panel.append(b);}
+ const app=$('app');if(!app||!['master','register'].includes(view))return;
+ if($('nv58-master-account'))return;
+ const panel=document.createElement('section');panel.id='nv58-master-account';
+ panel.style.cssText='margin:12px auto 20px;padding:18px;background:#fff;border:1px solid #cbdccf;border-radius:18px;max-width:900px;color:#173f35;display:grid;gap:10px';
+ panel.innerHTML='<h2 style="font-size:21px;margin:0">Мой аккаунт мастера</h2><p id="nv58-email-label" style="margin:0">Электронная почта: проверяем…</p><button class="btn ghost full" id="nv58-email" type="button">✉ Электронная почта — посмотреть или изменить</button><button class="btn ghost full" id="nv58-logout" type="button" style="border:2px solid #a54b40;color:#a54b40">Выйти из аккаунта</button>';
+ app.prepend(panel);
+ $('nv58-email').onclick=()=>{if(typeof window.navoEmailStep==='function')window.navoEmailStep();else alert('Откройте NAVO аккаунт для изменения электронной почты');};
+ $('nv58-logout').onclick=signOutMaster;
+ who().then(u=>{const el=$('nv58-email-label');if(el)el.textContent=u.email?'Электронная почта: '+u.email+(u.email_confirmed_at?' ✓ подтверждена':' — не подтверждена'):'Электронная почта ещё не указана';}).catch(()=>{const el=$('nv58-email-label');if(el)el.textContent='Для просмотра почты войдите в NAVO аккаунт';});
 }
 function firstVisit(){
  if(session()?.access_token||sessionStorage.getItem('nv57-visited'))return;
