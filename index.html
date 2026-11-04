@@ -13,30 +13,7 @@ el('verify').onclick=async()=>{const token=el('code').value.trim();if(!/^\d{6}$/
 async function enter(){const u=await current();if(!u.phone_confirmed_at)throw Error('Номер не подтверждён');el('login').classList.add('hide');el('inside').classList.remove('hide');el('account-phone').textContent=u.phone||auth.navo_phone||'';el('profile-phone').textContent=u.phone||'';show('catalog');catalog();services()}
 function show(id){for(const x of ['catalog','bookings','profile','master-register','master-login']){el(x).classList.toggle('hide',x!==id);if(el('tab-'+x))el('tab-'+x).className=x===id?'primary':'secondary'}}
 for(const id of ['catalog','bookings','profile'])el('tab-'+id).onclick=()=>{show(id);if(id==='bookings')bookings()};
-async function catalog(){try{
- const rows=await request('/rest/v1/navo_test_master_catalog?select=*&limit=100',null,auth.access_token,'GET');
- el('catalog-status').textContent=rows.length?'Доступные мастера и салоны':'Пока нет зарегистрированных мастеров';
- const box=el('catalog-items');box.replaceChildren();
- for(const row of rows){
- const d=document.createElement('div');d.className='item';const title=document.createElement('strong');title.textContent=row.display_name||'Мастер NAVO';d.append(title);
- if(row.photo_url){const img=document.createElement('img');img.src=row.photo_url;img.alt='Фото мастера';img.loading='lazy';img.style.cssText='width:90px;height:90px;object-fit:cover;border-radius:12px;display:block;margin:10px 0';d.append(img)}
- const p=document.createElement('p');p.className='muted';p.textContent=[row.city,row.work_address].filter(Boolean).join(', ');d.append(p);
- const btn=document.createElement('button');btn.type='button';btn.className='primary full';btn.textContent='Посмотреть услуги и цены';btn.onclick=()=>openMasterServices(row);d.append(btn);box.append(d)
- }
- }catch(e){el('catalog-status').textContent='Каталог недоступен: '+e.message}}
-async function openMasterServices(master){
- const box=el('catalog-items');box.replaceChildren();const back=document.createElement('button');back.type='button';back.className='secondary';back.textContent='← Все мастера';back.onclick=catalog;box.append(back);
- const h=document.createElement('h3');h.textContent=master.display_name||'Мастер NAVO';box.append(h);
- const address=document.createElement('p');address.textContent=[master.city,master.work_address].filter(Boolean).join(', ');box.append(address);
- const status=document.createElement('p');status.textContent='Загружаем услуги…';box.append(status);
- try{
- const prices=await request('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc',null,auth.access_token,'GET');
- status.textContent=prices.length?'Услуги и стоимость (сомони)':'Мастер пока не указал цены. Запись станет доступна после их заполнения.';
- const grouped={};for(const item of prices)(grouped[item.category]??=[]).push(item);
- for(const [category,items] of Object.entries(grouped)){const group=document.createElement('details');group.className='item';group.open=true;const summary=document.createElement('summary');summary.textContent=category+' ('+items.length+')';summary.style.cssText='font-weight:700;cursor:pointer';group.append(summary);
- for(const item of items){const line=document.createElement('div');line.style.cssText='display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #ddd';const name=document.createElement('span');name.textContent=item.name;const price=document.createElement('strong');price.textContent=item.price_somoni+' сомони';line.append(name,price);group.append(line)}box.append(group)}
- }catch(e){status.textContent='Ошибка загрузки услуг: '+e.message}
-}
+async function catalog(){try{const rows=await request('/rest/v1/navo_test_master_catalog?select=*&limit=100',null,auth.access_token,'GET');el('catalog-status').textContent=rows.length?'Доступные мастера и салоны':'Пока нет опубликованных мастеров';el('catalog-items').replaceChildren();for(const row of rows){const d=document.createElement('div');d.className='item';const title=document.createElement('strong');title.textContent=row.salon_name||row.display_name||row.name||'Мастер NAVO';d.append(title);if(row.photo_url){const img=document.createElement('img');img.src=row.photo_url;img.alt='Фото мастера';img.loading='lazy';img.style.cssText='width:90px;height:90px;object-fit:cover;border-radius:12px;display:block;margin:10px 0';d.append(img)}if(Array.isArray(row.services)&&row.services.length){const sv=document.createElement('p');sv.className='muted';sv.textContent='Выбрано услуг: '+row.services.length;d.append(sv)}if(row.city||row.work_address){const p=document.createElement('p');p.className='muted';p.textContent=[row.city,row.work_address].filter(Boolean).join(', ');d.append(p)}el('catalog-items').append(d)}}catch(e){el('catalog-status').textContent='Каталог временно недоступен: '+e.message}}
 async function services(){try{const rows=await request('/rest/v1/service_catalog?select=category,name&order=category.asc,name.asc&limit=500',null,auth.access_token,'GET');const box=el('service-items');box.replaceChildren();const groups={};for(const item of rows){(groups[item.category]??=[]).push(item.name)}for(const [name,items] of Object.entries(groups)){const section=document.createElement('details');section.className='item';const summary=document.createElement('summary');summary.style.cssText='cursor:pointer;font-weight:700;padding:7px 0';summary.textContent=name+' ('+items.length+')';section.append(summary);const ul=document.createElement('ul');for(const item of items){const li=document.createElement('li');li.textContent=item;li.style.padding='5px 0';ul.append(li)}section.append(ul);box.append(section)}}catch(e){el('service-items').textContent='Не удалось загрузить услуги: '+e.message}}
 async function bookings(){try{const u=await current(),rows=await request('/rest/v1/bookings?select=id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(u.id)+'&order=starts_at.desc&limit=100',null,auth.access_token,'GET');el('bookings-status').textContent=rows.length?'Ваши записи':'Пока нет записей';el('bookings-items').replaceChildren();for(const row of rows){const p=document.createElement('p');p.className='item';p.textContent=new Date(row.starts_at).toLocaleString('ru-RU')+' · '+row.status+' · '+row.total_somoni+' сомони';el('bookings-items').append(p)}}catch(e){el('bookings-status').textContent='Не удалось загрузить записи: '+e.message}}
 
@@ -73,29 +50,10 @@ async function confirmMasterEmail(){
   reg.verified=true;showMasterDetails();masterStatus('Почта подтверждена. Заполните анкету мастера.');
  }catch(e){masterStatus('Ошибка подтверждения: '+e.message)}finally{btn.disabled=false}
 }
-function groupedPricePicker(box,rows,selected,prices){
- box.replaceChildren();const groups={};for(const item of rows)(groups[item.category]??=[]).push(item);
- for(const [category,items] of Object.entries(groups)){
- const group=document.createElement('details');group.className='item';group.open=items.some(x=>selected.includes(Number(x.id)));
- const title=document.createElement('summary');title.style.cssText='font-weight:700;cursor:pointer;padding:8px 0';title.textContent=category+' ('+items.length+')';group.append(title);
- for(const item of items){const line=document.createElement('div');line.style.cssText='display:grid;grid-template-columns:24px 1fr 105px;align-items:center;gap:8px;margin:9px 0';
- const check=document.createElement('input');check.type='checkbox';check.value=item.id;check.checked=selected.includes(Number(item.id));check.style.width='auto';
- const label=document.createElement('span');label.textContent=item.name;const price=document.createElement('input');price.type='number';price.min='1';price.step='0.01';price.placeholder='сомони';price.value=prices[item.id]??'';price.dataset.priceFor=item.id;price.setAttribute('aria-label','Цена услуги '+item.name);price.disabled=!check.checked;
- check.onchange=()=>{price.disabled=!check.checked;if(check.checked)group.open=true};line.append(check,label,price);group.append(line)
- }box.append(group)
- }
-}
-function selectedServicePrices(box){const chosen=[...box.querySelectorAll('input[type=checkbox]:checked')];if(!chosen.length)throw Error('Выберите хотя бы одну услугу');
- return chosen.map(cb=>{const input=box.querySelector('[data-price-for="'+cb.value+'"]'),price=Number(input.value);if(!Number.isFinite(price)||price<=0)throw Error('Укажите цену в сомони для каждой выбранной услуги');return {service_id:Number(cb.value),price_somoni:price}})}
-async function persistServicePrices(uid,token,prices){
- const del=await fetch(ROOT+'/rest/v1/navo_master_prices?master_id=eq.'+encodeURIComponent(uid),{method:'DELETE',headers:{apikey:KEY,Authorization:'Bearer '+token}});if(!del.ok)throw Error('Не удалось обновить список цен');
- const response=await fetch(ROOT+'/rest/v1/navo_master_prices',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(prices.map(x=>({...x,master_id:uid})))});
- if(!response.ok){const e=await response.json().catch(()=>({}));throw Error('Не удалось сохранить цены: '+(e.message||response.status))}
-}
 async function showMasterDetails(){
  el('mr-email-step').classList.add('hide');el('mr-details').classList.remove('hide');el('mr-confirmed').textContent='✓ Подтверждённая почта: '+reg.email;
  const u=await current();el('mr-phone').value=u.phone||'';
- try{const rows=await request('/rest/v1/service_catalog?select=id,category,name&order=category.asc,name.asc&limit=500',null,auth.access_token,'GET');groupedPricePicker(el('mr-services'),rows,[],{})}catch(e){masterStatus('Ошибка загрузки услуг: '+e.message)}
+ try{const rows=await request('/rest/v1/service_catalog?select=id,category,name&order=category.asc,name.asc&limit=500',null,auth.access_token,'GET');const box=el('mr-services');box.replaceChildren();for(const item of rows){const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:center;font-weight:400;margin:10px 0';const cb=document.createElement('input');cb.type='checkbox';cb.value=item.id;cb.style.width='auto';label.append(cb,document.createTextNode(item.name+' · '+item.category));box.append(label)}}catch(e){masterStatus('Ошибка загрузки услуг: '+e.message)}
 }
 async function submitMaster(){
  const btn=el('mr-submit');btn.disabled=true;masterStatus('Проверяем данные…');
@@ -104,7 +62,7 @@ async function submitMaster(){
   const get=id=>el(id).value.trim(),password=el('mr-password').value;
   if(!get('mr-name')||!get('mr-phone')||!get('mr-passport')||!get('mr-city')||!get('mr-address'))throw Error('Заполните все обязательные поля');
   if(password.length<8||password!==el('mr-password2').value)throw Error('Пароль должен содержать не менее 8 символов и совпадать в обоих полях');
-  const selectedPrices=selectedServicePrices(el('mr-services'));const services=selectedPrices.map(x=>x.service_id);
+  const services=[...el('mr-services').querySelectorAll('input:checked')].map(x=>Number(x.value));
   if(!services.length)throw Error('Выберите хотя бы одну услугу');
   const photo=el('mr-photo').files[0];if(!photo)throw Error('Добавьте фотографию');
   if(photo.size>5*1024*1024||!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Фото должно быть JPG, PNG или WebP, до 5 МБ');
@@ -114,7 +72,7 @@ async function submitMaster(){
   const photo_url=ROOT+'/storage/v1/object/public/master-photos/'+path;
   await request('/auth/v1/user',{password},auth.access_token,'PUT');
   const row={user_id:u.id,full_name:get('mr-name'),phone:get('mr-phone'),email:reg.email,passport_number:get('mr-passport'),city:get('mr-city'),work_address:get('mr-address'),photo_url,services,status:'pending'};
-  await request('/rest/v1/master_applications?on_conflict=user_id',row,auth.access_token,'POST');await persistServicePrices(u.id,auth.access_token,selectedPrices);
+  await request('/rest/v1/master_applications?on_conflict=user_id',row,auth.access_token,'POST');
   masterStatus('✓ Анкета сохранена. Мастер доступен в каталоге NAVO. Пароль сохранён для будущего входа.');
   el('mr-submit').disabled=true;el('mr-password').value='';el('mr-password2').value='';
  }catch(e){masterStatus('Ошибка: '+e.message);btn.disabled=false}
@@ -137,7 +95,68 @@ async function masterBookings(){
 }
 async function masterEditLoad(){
  const p=masterProfile;for(const [id,key] of [['md-name','full_name'],['md-phone','phone'],['md-city','city'],['md-address','work_address']])el(id).value=p[key]||'';
- const box=el('md-services');const rows=await request('/rest/v1/service_catalog?select=id,name,category&order=category.asc,name.asc&limit=500',null,masterSession.access_token,'GET');
- const saved=await request('/rest/v1/navo_master_prices?select=service_id,price_somoni&master_id=eq.'+encodeURIComponent(masterSession.user.id),null,masterSession.access_token,'GET');
- const prices={};for(const x of saved)prices[x.service_id]=x.price_somoni;
- groupedPricePicker(box,rows,Array.isArray(p.services)?p.services.map(Number):[],prices);
+ const box=el('md-services');box.replaceChildren();const rows=await request('/rest/v1/service_catalog?select=id,name,category&order=category.asc,name.asc&limit=500',null,masterSession.access_token,'GET');
+ for(const item of rows){const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:center;font-weight:400;margin:9px 0';const cb=document.createElement('input');cb.type='checkbox';cb.value=item.id;cb.checked=Array.isArray(p.services)&&p.services.some(x=>String(x)===String(item.id));cb.style.width='auto';label.append(cb,document.createTextNode(item.name+' · '+item.category));box.append(label)}
+}
+async function masterOpen(signed,p){
+ masterSession=signed;masterProfile=p;el('ml-dashboard').classList.remove('hide');el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address+' · '+p.status;masterTab('today');
+ try{await Promise.all([masterBookings(),masterEditLoad()])}catch(e){mstatus('md-today-status','Ошибка загрузки: '+e.message)}
+}
+el('md-photo').onchange=()=>{const f=el('md-photo').files[0];if(f){el('md-photo-preview').src=URL.createObjectURL(f);el('md-photo-preview').style.display='block'}};
+el('md-save').onclick=async()=>{
+ const btn=el('md-save');btn.disabled=true;mstatus('md-save-status','Сохраняем…');
+ try{
+  const p=masterProfile,token=masterSession.access_token,uid=masterSession.user.id;
+  const services=[...el('md-services').querySelectorAll('input:checked')].map(x=>Number(x.value));if(!services.length)throw Error('Выберите хотя бы одну услугу');
+  const row={full_name:el('md-name').value.trim(),phone:el('md-phone').value.trim(),city:el('md-city').value.trim(),work_address:el('md-address').value.trim(),services};
+  if(Object.values(row).some(x=>typeof x==='string'&&!x))throw Error('Заполните все поля');
+  const file=el('md-photo').files[0];
+  if(file){if(file.size>5242880||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Фото должно быть JPG, PNG или WebP до 5 МБ');
+   const path=uid+'/portrait-'+Date.now()+'.'+file.type.split('/')[1];const upload=await fetch(ROOT+'/storage/v1/object/master-photos/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':file.type},body:file});
+   if(!upload.ok)throw Error('Не удалось загрузить фотографию');row.photo_url=ROOT+'/storage/v1/object/public/master-photos/'+path;
+  }
+  const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(uid),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(row)});
+  const data=await res.json().catch(()=>[]);if(!res.ok)throw Error(data.message||'Ошибка сохранения '+res.status);if(!data.length)throw Error('Редактирование этой анкеты пока ограничено её статусом');
+  masterProfile={...p,...data[0]};mstatus('md-save-status','✓ Изменения сохранены');el('ml-profile-info').textContent=masterProfile.full_name+' · '+masterProfile.city+' · '+masterProfile.work_address;
+ }catch(e){mstatus('md-save-status','Ошибка: '+e.message)}finally{btn.disabled=false}
+};
+el('md-send-email').onclick=async()=>{
+ const email=el('md-new-email').value.trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){mstatus('md-email-status','Введите корректную почту');return}
+ try{await request('/auth/v1/user',{email},masterSession.access_token,'PUT');masterEmailPending=email;mstatus('md-email-status','Код отправлен. Введите шесть цифр из письма.')}catch(e){mstatus('md-email-status','Ошибка отправки: '+e.message)}
+};
+el('md-confirm-email').onclick=async()=>{
+ const token=el('md-email-code').value.trim();if(!masterEmailPending||!/^[0-9]{6}$/.test(token)){mstatus('md-email-status','Введите шестизначный код');return}
+ try{const verified=await request('/auth/v1/verify',{type:'email_change',email:masterEmailPending,token});
+  if(verified.access_token)masterSession={...verified,expires_at:Date.now()+(Number(verified.expires_in)||3600)*1000};
+  const u=await request('/auth/v1/user',null,masterSession.access_token,'GET');
+  if(u.email?.toLowerCase()!==masterEmailPending||!u.email_confirmed_at)throw Error('Почта ещё не подтверждена сервером');
+  const response=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(u.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({email:masterEmailPending})});
+  const data=await response.json().catch(()=>[]);if(!response.ok||!data.length)throw Error('Почта подтверждена, но обновить анкету не удалось. Обратитесь к администратору.');
+  masterProfile=data[0];save(masterSession);masterEmailPending='';mstatus('md-email-status','✓ Почта подтверждена и обновлена');
+ }catch(e){mstatus('md-email-status','Ошибка: '+e.message)}
+};
+el('ml-back').onclick=()=>show('catalog');
+el('ml-submit').onclick=async()=>{
+ const email=el('ml-email').value.trim().toLowerCase(),password=el('ml-password').value,button=el('ml-submit'),status=el('ml-status');
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!password){status.textContent='Введите почту и пароль';return}
+ button.disabled=true;status.textContent='Проверяем данные…';
+ try{
+  const signed=await request('/auth/v1/token?grant_type=password',{email,password});
+  if(!signed.access_token)throw Error('Не удалось войти');
+  const profiles=await request('/rest/v1/master_applications?select=*&user_id=eq.'+encodeURIComponent(signed.user.id),null,signed.access_token,'GET');
+  if(!profiles.length)throw Error('Для этой почты ещё нет анкеты мастера. Сначала зарегистрируйтесь.');
+  const p=profiles[0];if(p.email.toLowerCase()!==email)throw Error('Адрес почты не совпадает с адресом регистрации мастера');
+  save({...signed,expires_at:Date.now()+(Number(signed.expires_in)||3600)*1000});
+  status.textContent='Вход выполнен. Анкета мастера: '+('доступна для тестирования')+'.';
+  el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address;
+  await masterOpen(signed,p);
+  el('account-phone').textContent=signed.user.phone||'';
+  el('profile-phone').textContent=signed.user.phone||'';
+ }catch(e){status.textContent='Ошибка входа: '+(e.message==='Invalid login credentials'?'Неверная почта или пароль':e.message)}
+ finally{button.disabled=false}
+};
+
+el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
+(async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
+})();
+</script><script src="./navo-prices-v72.js?v=72" defer></script></body></html>
