@@ -1126,7 +1126,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function screen(){
   view='master';render();
   document.querySelector('#app').innerHTML='<div id="nv51-master-entry"><button class="btn ghost" id="nv51-back">← Для клиента</button><p class="steps">NAVO SERVICES · КАБИНЕТ МАСТЕРА</p><h2>Стать мастером</h2><p class="subtle">Вы уже вошли как клиент. Для открытия кабинета мастера нужно подтвердить телефон и электронную почту.</p><div id="nv51-info" class="nv51-number">Проверяем номер…</div><button class="btn" id="nv51-continue" disabled>Проверяем аккаунт…</button><p class="subtle" id="nv51-error" role="status"></p></div>';
-  document.getElementById('nv51-back').onclick=()=>{view='catalog';render()};
+  document.getElementById('nv51-back').onclick=()=>{window.location.reload()};
   check();
  }
  async function check(){
@@ -1144,7 +1144,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  // Replace the old direct role toggle with a verified onboarding screen.
  window.addEventListener('DOMContentLoaded',()=>{
-  const role=document.getElementById('role');if(role){role.onclick=()=>{if(view==='master'||view==='register'){view='catalog';render()}else screen()};role.textContent='Стать мастером'}
+  const role=document.getElementById('role');if(role){role.onclick=()=>{if(view==='master'||view==='register'){window.location.reload()}else screen()};role.textContent='Стать мастером'}
   const observer=new MutationObserver(()=>{if(view==='catalog'&&role)role.textContent='Стать мастером'});
   if(role)observer.observe(role,{childList:true});
  });
