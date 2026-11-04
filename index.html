@@ -1021,7 +1021,7 @@ document.addEventListener('keydown',function(e){
 var ROOT='https://wvixivswjqxyunpoiqrl.supabase.co',KEY='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP',EK='navo-master-email-v48',AK='navo-auth-session-v43';
 function raw(){try{return JSON.parse(localStorage.getItem(AK)||'null')}catch(e){return null}}
 function saveSess(patch){try{var a=raw();if(!a)return;Object.assign(a,patch);var v=JSON.stringify(a);localStorage.setItem(AK,v);sessionStorage.setItem(AK,v)}catch(e){}}
-function emailOk(){var a=navoAuth();if(!a)return false;try{var v=localStorage.getItem(EK)||'';return v.split('|')[0]===a.user.id}catch(e){return false}}
+function emailOk(){var a=navoAuth();if(!a||!a.user||!a.user.id)return false;return !!(a.user.email&&a.user.email_confirmed_at&&!a.user.new_email)}
 function setEmail(u){if(u&&u.id&&u.email){try{localStorage.setItem(EK,u.id+'|'+u.email)}catch(e){}}}
 function fresh(){var a=raw();if(!a||!a.refresh_token||(a.expires_at||0)>Date.now()+60000)return Promise.resolve();
   return fetch(ROOT+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:a.refresh_token})}).then(function(r){return r.json().then(function(v){if(r.ok&&v.access_token)saveSess({access_token:v.access_token,refresh_token:v.refresh_token||a.refresh_token,expires_at:Date.now()+(Number(v.expires_in)||3600)*1000})})}).catch(function(){})}
@@ -1041,8 +1041,7 @@ window.navoEmailStep=emailStep;
 var _nm=window.navoNewMaster;
 window.navoNewMaster=function(){
   if(!navoAuth()){try{sessionStorage.setItem('navo-resume-master','1')}catch(e){}navoNeedLogin('Мастеру нужно войти по номеру телефона, а затем подтвердить почту.');try{sessionStorage.removeItem('navo-resume-booking')}catch(e){}return}
-  if(!emailOk()){emailStep();return}
-  _nm()};
+  call('GET','/auth/v1/user').then(function(u){var a=raw();if(a){a.user=u;saveSess({user:u})}if(u&&u.email&&u.email_confirmed_at&&!u.new_email){setEmail(u);_nm()}else emailStep()}).catch(function(){emailStep()});return};
 window.addEventListener('load',function(){
   setTimeout(function(){
     if(!navoAuth())return;
