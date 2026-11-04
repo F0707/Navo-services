@@ -146,7 +146,25 @@ document.addEventListener('DOMContentLoaded',()=>{
  const roleBtn=$('role');
  if(roleBtn)roleBtn.addEventListener('click',e=>{if(view==='catalog'||view==='bookings'){e.stopImmediatePropagation();masterChoice();}},true);
  const nav=document.querySelector('header nav');
- if(nav)nav.addEventListener('click',e=>{const button=e.target.closest('button[data-view]');if(!button)return;e.preventDefault();e.stopImmediatePropagation();view=button.dataset.view;render();},true);
+ // V63: isolated client bookings view, bypass legacy render() and its competing listeners.
+ const safeBookings=()=>{
+   const app=$('app');if(!app)return;
+   view='bookings';
+   const h=document.querySelector('header nav');if(h)h.hidden=false;
+   document.querySelectorAll('header .nav').forEach(x=>x.classList.toggle('active',x.dataset.view==='bookings'));
+   app.innerHTML='<div class="sectiontop"><h1>Мои записи</h1><p class="subtle">Ваши записи в NAVO</p></div><section style="padding:18px;border:1px solid #d7e2d8;border-radius:16px;background:white"><p id="nv63-booking-status">Загружаем записи из Supabase…</p><div id="nv63-booking-list"></div><button class="btn full" id="nv63-back" type="button">← Найти мастера</button></section>';
+   $('nv63-back').onclick=()=>{view='catalog';render()};
+   const a=session();if(!a?.access_token){$('nv63-booking-status').textContent='Для просмотра записей войдите по SMS.';return}
+   Promise.resolve().then(async()=>{
+     const u=await who();
+     const records=await api('/rest/v1/bookings?select=id,starts_at,status,total_somoni,master_id&client_id=eq.'+encodeURIComponent(u.id)+'&order=starts_at.desc&limit=100');
+     const el=$('nv63-booking-list'),status=$('nv63-booking-status');if(!el||!status)return;
+     status.textContent=records.length?'Найдено записей: '+records.length:'Пока нет облачных записей';
+     for(const item of records){const div=document.createElement('p');div.style.cssText='border-bottom:1px solid #ddd;padding:10px 0';div.textContent=new Date(item.starts_at).toLocaleString('ru-RU')+' · '+item.status+' · '+item.total_somoni+' сомони';el.append(div)}
+   }).catch(e=>{const el=$('nv63-booking-status');if(el)el.textContent='Не удалось загрузить записи: '+e.message});
+ };
+
+ if(nav)nav.addEventListener('click',e=>{const button=e.target.closest('button[data-view]');if(!button)return;e.preventDefault();e.stopImmediatePropagation();if(button.dataset.view==='bookings')safeBookings();else{view=button.dataset.view;render();}},true);
  
  observer.observe($('app'),{childList:true,subtree:true});
  installForm();masterButtons();firstVisit();recover();
