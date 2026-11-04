@@ -55,14 +55,17 @@ async function clientCards(){
  const user=api().getAuth()?.user;if(!user)return;
  const rows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');
  box.replaceChildren();if(!rows.length){box.append(text('p','У вас пока нет записей'));return}
+ const masters=await get('/rest/v1/navo_test_master_catalog?select=master_id,display_name,city,work_address,photo_url&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
  for(const b of rows){
  const card=document.createElement('div');card.className='item';
- const title=text('strong',dateText(b.starts_at));const status=text('p','Статус: '+({completed:'Обслуживание завершено',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status)+' · '+b.total_somoni+' сомони');
- const detail=document.createElement('div');detail.hidden=true;card.append(title,status);
+ const master=masterMap.get(b.master_id);const title=text('strong',master?.display_name?'Мастер: '+master.display_name:'Мастер NAVO');const status=text('p','Статус: '+({completed:'Обслуживание завершено',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status)+' · '+b.total_somoni+' сомони');
+ const detail=document.createElement('div');detail.hidden=true;card.append(title,text('p',dateText(b.starts_at)),status);
  const toggle=button('Открыть запись',()=>{detail.hidden=!detail.hidden;toggle.textContent=detail.hidden?'Открыть запись':'Свернуть запись'});card.append(toggle,detail);
+ if(master?.photo_url){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото мастера';photo.style.cssText='width:76px;height:76px;object-fit:cover;border-radius:12px';detail.append(photo)}
+ detail.append(text('h3','Ваш мастер'),text('p',master?.display_name||'Мастер NAVO'),text('p','Адрес: '+([master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес не указан')),text('h3','Дата и время'),text('p',dateText(b.starts_at)),text('h3','Выбранные услуги'));
  const items=await get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id);
- detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Услуги не указаны'));
- if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code)detail.append(text('h3','Код посещения: '+code))}catch(e){}}
+ detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Для этой старой записи список услуг не сохранён'),text('h3','Итого: '+b.total_somoni+' сомони'));
+ if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code){const codeBox=document.createElement('div');codeBox.className='item';codeBox.style.textAlign='center';const caption=text('p','Код подтверждения обслуживания');const digits=text('h2',String(code).padStart(4,'0'));digits.style.cssText='font-size:34px;letter-spacing:8px;margin:8px 0';codeBox.append(caption,digits,text('p','После окончания обслуживания сообщите эти 4 цифры мастеру. Мастер введёт код, чтобы завершить запись.'));detail.append(codeBox)}}catch(e){}}
  if(['requested','confirmed'].includes(b.status)){
  const edit=button('Изменить дату и время',()=>{form.hidden=!form.hidden});const form=document.createElement('div');form.hidden=true;
  const date=document.createElement('input');date.type='date';const time=document.createElement('input');time.type='time';time.step=1800;
@@ -92,7 +95,7 @@ async function masterCards(){
  const box=$('md-'+kind+'-list');if(!box)continue;box.replaceChildren();
  for(const b of items){const card=document.createElement('div');card.className='item';card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
  const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));
- if(b.status==='confirmed'){const code=document.createElement('input');code.placeholder='4-значный код клиента';code.inputMode='numeric';code.maxLength=4;const result=text('p','');card.append(code,button('Клиент обслужен — закрыть запись',async()=>{try{const ok=await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);if(!ok)throw Error('Неверный код. Проверьте четыре цифры.');await masterCards()}catch(e){result.textContent=e.message}}),result)}
+ if(['confirmed','requested'].includes(b.status)){const code=document.createElement('input');code.placeholder='4-значный код клиента';code.inputMode='numeric';code.maxLength=4;const result=text('p','');card.append(code,button('Клиент обслужен — закрыть запись',async()=>{try{const ok=await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);if(!ok)throw Error('Неверный код. Проверьте четыре цифры.');await masterCards()}catch(e){result.textContent=e.message}}),result)}
  if(b.status==='completed')card.append(text('p','✓ Обслуживание завершено'));
  box.append(card)}
  }
