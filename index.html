@@ -141,11 +141,11 @@ async function handleRecoveryLink(){
  const access=hash.get('access_token'),type=hash.get('type'),error=hash.get('error_description')||query.get('error_description');
  if(!access&&type!=='recovery'&&!error)return;
  const panel=el('ml-reset-panel');el('inside').classList.remove('hide');el('login').classList.add('hide');el('master-login').classList.remove('hide');panel.classList.remove('hide');
- el('ml-reset-step2').classList.remove('hide');el('ml-reset-send').classList.add('hide');el('ml-reset-code').parentElement?.querySelector('label[for="ml-reset-code"]')?.classList.add('hide');el('ml-reset-code').classList.add('hide');
+ el('ml-reset-step2').classList.remove('hide');el('ml-reset-send').classList.add('hide');el('ml-reset-code').classList.add('hide');
  const status=el('ml-reset-status');if(error){status.textContent='Ссылка недействительна или срок её действия истёк: '+error;return}
  if(access&&type==='recovery'){window.navoRecoveryToken=access;status.textContent='Ссылка подтверждена. Придумайте новый пароль и повторите его.';history.replaceState(null,'',location.pathname+'?v=82')}
 }
-el('ml-forgot').onclick=()=>{el('ml-reset-email').value=el('ml-email').value.trim();el('ml-reset-panel').classList.remove('hide');el('ml-reset-step2').classList.remove('hide');el('ml-reset-status').textContent='Если код уже пришёл, введите его ниже. Повторно отправлять письмо необязательно.';el('ml-reset-email').focus()};
+el('ml-forgot').onclick=()=>{el('ml-reset-email').value=el('ml-email').value.trim();el('ml-reset-panel').classList.remove('hide');el('ml-reset-step2').classList.remove('hide');el('ml-reset-code').classList.remove('hide');el('ml-reset-send').classList.remove('hide');el('ml-reset-status').textContent='Введите временный код из письма в отдельное поле ниже, затем придумайте новый пароль.';el('ml-reset-email').focus()};
 el('ml-reset-back').onclick=()=>el('ml-reset-panel').classList.add('hide');
 el('ml-reset-send').onclick=async()=>{
  const email=el('ml-reset-email').value.trim().toLowerCase(),status=el('ml-reset-status'),btn=el('ml-reset-send');
@@ -157,7 +157,7 @@ el('ml-reset-send').onclick=async()=>{
 };
 el('ml-reset-confirm').onclick=async()=>{
  const email=el('ml-reset-email').value.trim().toLowerCase(),code=el('ml-reset-code').value.trim(),password=el('ml-reset-password').value,again=el('ml-reset-password2').value,status=el('ml-reset-status'),btn=el('ml-reset-confirm');
- if(!window.navoRecoveryToken&&!/^[0-9]{6}$/.test(code)){status.textContent='Введите код из письма (6–8 цифр)';return}
+ if(!window.navoRecoveryToken&&!/^[0-9]{6,8}$/.test(code)){status.textContent='Введите код из письма (6–8 цифр)';return}
  if(password.length<8){status.textContent='Пароль должен содержать не менее 8 символов';return}
  if(password!==again){status.textContent='Пароли не совпадают';return}
  btn.disabled=true;status.textContent='Проверяем код…';
@@ -195,4 +195,4 @@ window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,ge
 el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=73" defer></script><script src="./navo-booking-v73.js?v=80" defer></script><script src="./navo-inbox-v78.js?v=78" defer></script><script src="./navo-password-reset-v81.js?v=81" defer></script></body></html>
+</script><script src="./navo-prices-v72.js?v=73" defer></script><script src="./navo-booking-v73.js?v=80" defer></script><script src="./navo-inbox-v78.js?v=78" defer></script></body></html>
