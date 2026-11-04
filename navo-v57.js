@@ -67,10 +67,17 @@ function installForm(){
   section.querySelector('#nv57-email-change').onclick=()=>window.navoEmailStep();
   who().then(u=>{const el=$('nv57-email-value');if(el)el.textContent=u.email?(u.email_confirmed_at?'✓ Подтверждена: ':'Не подтверждена: ')+u.email:'Почта ещё не добавлена';}).catch(()=>{const el=$('nv57-email-value');if(el)el.textContent='Войдите в аккаунт для просмотра почты';});
  }
+ if(!navoEditingMaster&&!$('nv59-register-password')){
+  const p=document.createElement('div');p.id='nv59-register-password';p.style.cssText='padding:16px;border:1px solid #d2e3d0;border-radius:14px;margin:12px 0';
+  p.innerHTML='<h3>Доступ к кабинету мастера</h3><p>Имя мастера будет отображаться как имя профиля. Для входа на другом устройстве используйте подтверждённую почту и пароль.</p><label>Пароль мастера<input id="nv59-created-password" type="text" autocomplete="new-password" minlength="8" required style="width:100%;padding:12px"></label><button type="button" class="btn ghost" id="nv59-generate">Сгенерировать пароль</button><p style="font-size:13px">Сохраните пароль в надёжном месте. Он не сохраняется в браузере NAVO.</p>';
+  form.querySelector('.navo-reg-submit').before(p);
+  const gen=()=>{const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';const arr=new Uint32Array(16);crypto.getRandomValues(arr);$('nv59-created-password').value=Array.from(arr,x=>alphabet[x%alphabet.length]).join('');};
+  $('nv59-generate').onclick=gen;gen();
+ }
  form.addEventListener('submit',async e=>{
   e.preventDefault();e.stopImmediatePropagation();
   const btn=form.querySelector('[type="submit"]');btn.disabled=true;const label=btn.textContent;btn.textContent='Сохраняем в Supabase…';
-  try{await saveMaster(form);navoEditingMaster=false;view='master';render();alert('✓ Профиль и услуги сохранены в Supabase. Они доступны на других устройствах.');}
+  try{if(!navoEditingMaster){const p=$('nv59-created-password')?.value;if(!p||p.length<8)throw Error('Укажите пароль длиной от 8 символов');await api('/auth/v1/user','PUT',{password:p});}await saveMaster(form);navoEditingMaster=false;view='master';render();alert('✓ Профиль и услуги сохранены в Supabase. Они доступны на других устройствах.');}
   catch(err){alert('Не удалось сохранить: '+err.message+'\nДанные не считаются опубликованными.');}
   finally{btn.disabled=false;btn.textContent=label;}
  },true);
