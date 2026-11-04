@@ -10,7 +10,7 @@ async function current(){if(!auth?.access_token)throw Error('Нет активн
 function normalize(){const d=el('phone').value.replace(/\D/g,'');return d.startsWith('992')?d:'992'+d}
 el('send').onclick=async()=>{phone=normalize();if(!/^992\d{9}$/.test(phone)){msg('Введите номер Таджикистана в формате +992 XX XXX XX XX');return}el('send').disabled=true;msg('Отправляем SMS…');try{await request('/auth/v1/otp',{phone:'+'+phone,create_user:true});el('code-area').classList.remove('hide');msg('SMS отправлено. Введите шестизначный код.');el('code').focus()}catch(e){msg('Ошибка отправки SMS: '+e.message)}finally{el('send').disabled=false}};
 el('verify').onclick=async()=>{const token=el('code').value.trim();if(!/^\d{6}$/.test(token)){msg('Введите 6 цифр из SMS');return}el('verify').disabled=true;msg('Проверяем SMS…');try{const a=await request('/auth/v1/verify',{phone:'+'+phone,token,type:'sms'});if(!a.access_token)throw Error('Не получена сессия');save({...a,navo_phone:'+'+phone,expires_at:Date.now()+(Number(a.expires_in)||3600)*1000});await enter()}catch(e){msg('Ошибка подтверждения: '+e.message)}finally{el('verify').disabled=false}};
-async function enter(){const u=await current();if(!u.phone_confirmed_at)throw Error('Номер не подтверждён');el('login').classList.add('hide');el('inside').classList.remove('hide');el('account-phone').textContent=u.phone||auth.navo_phone||'';el('profile-phone').textContent=u.phone||'';show('catalog');catalog();services()}
+async function enter(){const u=await current();if(!u.phone_confirmed_at&&!u.email_confirmed_at)throw Error('Номер или почта не подтверждены');el('login').classList.add('hide');el('inside').classList.remove('hide');el('account-phone').textContent=u.phone||auth.navo_phone||'';el('profile-phone').textContent=u.phone||'';show('catalog');catalog();services()}
 function show(id){for(const x of ['catalog','bookings','profile','master-register','master-login']){el(x).classList.toggle('hide',x!==id);if(el('tab-'+x))el('tab-'+x).className=x===id?'primary':'secondary'}}
 for(const id of ['catalog','bookings','profile'])el('tab-'+id).onclick=()=>{show(id);if(id==='bookings')bookings()};
 async function catalog(){try{const rows=await request('/rest/v1/navo_test_master_catalog?select=*&limit=100',null,auth.access_token,'GET');el('catalog-status').textContent=rows.length?'Доступные мастера и салоны':'Пока нет опубликованных мастеров';el('catalog-items').replaceChildren();for(const row of rows){const d=document.createElement('div');d.className='item';const title=document.createElement('strong');title.textContent=row.salon_name||row.display_name||row.name||'Мастер NAVO';d.append(title);if(row.photo_url){const img=document.createElement('img');img.src=row.photo_url;img.alt='Фото мастера';img.loading='lazy';img.style.cssText='width:90px;height:90px;object-fit:cover;border-radius:12px;display:block;margin:10px 0';d.append(img)}if(Array.isArray(row.services)&&row.services.length){const sv=document.createElement('p');sv.className='muted';sv.textContent='Выбрано услуг: '+row.services.length;d.append(sv)}if(row.city||row.work_address){const p=document.createElement('p');p.className='muted';p.textContent=[row.city,row.work_address].filter(Boolean).join(', ');d.append(p)}el('catalog-items').append(d)}}catch(e){el('catalog-status').textContent='Каталог временно недоступен: '+e.message}}
@@ -178,7 +178,17 @@ el('ml-submit').onclick=async()=>{
   const signed=await request('/auth/v1/token?grant_type=password',{email,password});
   if(!signed.access_token)throw Error('Не удалось войти');
   const profiles=await request('/rest/v1/master_applications?select=*&user_id=eq.'+encodeURIComponent(signed.user.id),null,signed.access_token,'GET');
-  if(!profiles.length)throw Error('Для этой почты ещё нет анкеты мастера. Сначала зарегистрируйтесь.');
+  if(!profiles.length){
+   save({...signed,expires_at:Date.now()+(Number(signed.expires_in)||3600)*1000});
+   reg.email=email;reg.verified=!!signed.user.email_confirmed_at;
+   if(!reg.verified)throw Error('Сначала подтвердите электронную почту через письмо.');
+   show('master-register');await showMasterDetails();
+   el('mr-email').value=email;
+   el('mr-password').value='';el('mr-password2').value='';
+   masterStatus('✓ Аккаунт и почта уже подтверждены. Повторная регистрация почты не нужна. Заполните анкету мастера, выберите услуги и сохраните.');
+   status.textContent='Аккаунт найден. Открыта анкета мастера для завершения регистрации.';
+   return;
+  }
   const p=profiles[0];if(p.email.toLowerCase()!==email)throw Error('Адрес почты не совпадает с адресом регистрации мастера');
   save({...signed,expires_at:Date.now()+(Number(signed.expires_in)||3600)*1000});
   status.textContent='Вход выполнен. Анкета мастера: '+('доступна для тестирования')+'.';
