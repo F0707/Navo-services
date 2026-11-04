@@ -45,7 +45,14 @@ async function saveMaster(form){
  const price=Number(form.querySelector('[data-nv25-price="'+sid+'"]').value),duration=Number(form.querySelector('[data-nv25-minutes="'+sid+'"]').value);
  if(!(price>0&&duration>=5&&duration<=600))throw Error('Проверьте цену и длительность услуги '+name);
  rows.push({master_id:u.id,service_id:cat.id,price_somoni:price,duration_minutes:duration});}
- const profile={user_id:u.id,display_name:val('master'),salon_name:val('salon'),city:val('area'),work_address:val('street'),landmark:val('landmark'),phone:val('phone')||u.phone};
+ const file=$('nv66-photo')?.files?.[0];let photoUrl=null;
+ if(file){if(file.size>5242880||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Фото должно быть JPG, PNG или WebP до 5 МБ');
+ const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg',path=u.id+'/profile-'+Date.now()+'.'+ext;
+ const upload=await fetch(ROOT+'/storage/v1/object/master-photos/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session().access_token,'Content-Type':file.type,'x-upsert':'true'},body:file});
+ if(!upload.ok){const e=await upload.json().catch(()=>({}));throw Error('Не удалось загрузить фотографию: '+(e.message||upload.status))}
+ photoUrl=ROOT+'/storage/v1/object/public/master-photos/'+path;
+ }else{const old=await api('/rest/v1/master_profiles?select=photo_url&user_id=eq.'+encodeURIComponent(u.id));photoUrl=old?.[0]?.photo_url||null;if(!photoUrl)throw Error('Добавьте фотографию мастера')}
+ const profile={photo_url:photoUrl,user_id:u.id,display_name:val('master'),salon_name:val('salon'),city:val('area'),work_address:val('street'),landmark:val('landmark'),phone:val('phone')||u.phone};
  if(!profile.display_name||!profile.salon_name||!profile.city||!profile.work_address)throw Error('Заполните обязательные поля');
  await api('/rest/v1/master_profiles?on_conflict=user_id','POST',profile);
  await api('/rest/v1/master_services?on_conflict=master_id,service_id','POST',rows);
@@ -58,6 +65,12 @@ function installForm(){
  form.dataset.cloudV57='1';
  const warn=document.querySelector('.navo-save-warning');if(warn)warn.textContent='Профиль и услуги сохраняются в NAVO Supabase и доступны на других устройствах после входа.';
  const hint=form.querySelector('.navo-reg-submit p');if(hint)hint.textContent='Публикация только после подтверждения сохранения в облаке.';
+ if(!document.getElementById('nv66-photo-field')){
+ const photo=document.createElement('div');photo.id='nv66-photo-field';photo.style.cssText='padding:16px;border:1px solid #d2e3d0;border-radius:14px;margin:12px 0';
+ photo.innerHTML='<h3>📷 Фотография мастера *</h3><p>Обязательная фотография для карточки мастера (JPG, PNG или WebP, до 5 МБ).</p><input type="file" id="nv66-photo" accept="image/jpeg,image/png,image/webp" '+(navoEditingMaster?'':'required')+'><img id="nv66-photo-preview" alt="Предпросмотр" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:16px;margin-top:12px">';
+ form.querySelector('.nv25-service-picker').before(photo);
+ document.getElementById('nv66-photo').onchange=e=>{const f=e.target.files[0],img=document.getElementById('nv66-photo-preview');if(f){img.src=URL.createObjectURL(f);img.style.display='block'}};
+ }
  const area=form.querySelector('.navo-reg-submit');
  if(area&&!$('nv57-email-section')){
   const section=document.createElement('div');section.id='nv57-email-section';
