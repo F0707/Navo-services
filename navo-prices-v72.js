@@ -29,25 +29,71 @@ async function editor(box,token,uid,selected){
  const prices={};for(const x of saved)prices[x.service_id]=x.price_somoni;pricePicker(box,rows,selected,prices);
 }
 async function clientMaster(master){
- const box=$('catalog-items');box.replaceChildren();const back=document.createElement('button');back.className='secondary';back.textContent='← Все мастера';back.onclick=()=>api().catalog();box.append(back);
- const heading=document.createElement('h3');heading.textContent=master.display_name;box.append(heading);
+ const box=$('catalog-items');box.replaceChildren();
+ const back=document.createElement('button');back.type='button';back.className='secondary';back.textContent='← К списку мастеров';back.onclick=()=>api().catalog();box.append(back);
+ const h=document.createElement('h3');h.textContent=master.display_name||'Мастер NAVO';box.append(h);
  const info=document.createElement('p');info.textContent=[master.city,master.work_address].filter(Boolean).join(', ');box.append(info);
- const status=document.createElement('p');status.textContent='Загрузка услуг…';box.append(status);
+ const message=document.createElement('p');message.className='muted';message.textContent='Загружаем услуги…';box.append(message);
  try{
- const rows=await read('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc',api().getAuth().access_token);
- status.textContent=rows.length?'Услуги и цены (сомони)':'Мастер ещё не указал цены. Для записи нужно сначала заполнить прайс-лист.';
- const groups={};for(const x of rows)(groups[x.category]??=[]).push(x);
- for(const [category,items] of Object.entries(groups)){const d=document.createElement('details');d.className='item';d.open=true;const sum=document.createElement('summary');sum.textContent=category;sum.style.fontWeight='700';d.append(sum);for(const item of items){const p=document.createElement('p');p.textContent=item.name+' — '+item.price_somoni+' сомони';d.append(p)}box.append(d)}
- }catch(e){status.textContent='Не удалось загрузить прайс-лист: '+e.message}
+ const token=api().getAuth().access_token;
+ const [priced,all]=await Promise.all([
+ read('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc',token),
+ read('/rest/v1/service_catalog?select=id,name,category&order=category.asc,name.asc&limit=500',token)
+ ]);
+ const byId=new Map(priced.map(x=>[Number(x.service_id),x]));
+ const chosenIds=Array.isArray(master.services)?master.services.map(Number):[];
+ const rows=chosenIds.map(id=>{const p=byId.get(id),base=all.find(x=>Number(x.id)===id);return p|| (base?{service_id:id,name:base.name,category:base.category,price_somoni:null}:null)}).filter(Boolean);
+ message.textContent=rows.length?'Отметьте нужные услуги. Цена указывается в сомони.':'Мастер пока не выбрал услуги.';
+ const selected=new Map();const total=document.createElement('strong');total.style.cssText='display:block;font-size:21px;margin:18px 0';
+ const date=document.createElement('input');date.type='date';date.setAttribute('aria-label','Дата записи');
+ const local=new Date(Date.now()+5*3600000);date.min=local.toISOString().slice(0,10);date.value=date.min;
+ const time=document.createElement('input');time.type='time';time.value='10:00';time.step='1800';time.setAttribute('aria-label','Время записи');
+ const submit=document.createElement('button');submit.className='primary full';submit.textContent='Отправить заявку на запись';
+ const update=()=>{const sum=[...selected.values()].reduce((n,x)=>n+Number(x.price_somoni),0);total.textContent='Итого: '+sum.toFixed(2)+' сомони';submit.disabled=!selected.size};
+ const groups={};for(const item of rows)(groups[item.category]??=[]).push(item);
+ for(const [category,items] of Object.entries(groups)){
+ const d=document.createElement('details');d.className='item';d.open=true;
+ const summary=document.createElement('summary');summary.style.cssText='font-weight:750;cursor:pointer;padding:8px';summary.textContent=category+' ('+items.length+')';d.append(summary);
+ for(const item of items){
+ const line=document.createElement('label');line.style.cssText='display:flex;align-items:center;gap:10px;font-weight:400;margin:10px 0';
+ const cb=document.createElement('input');cb.type='checkbox';cb.style.width='auto';cb.disabled=!(Number(item.price_somoni)>0);
+ const name=document.createElement('span');name.style.flex='1';name.textContent=item.name;
+ const price=document.createElement('strong');price.textContent=cb.disabled?'Цена не указана':Number(item.price_somoni).toFixed(2)+' сом.';
+ cb.onchange=()=>{if(cb.checked)selected.set(item.service_id,item);else selected.delete(item.service_id);update()};
+ line.append(cb,name,price);d.append(line)
+ }box.append(d)
+ }
+ const section=document.createElement('div');section.className='item';
+ const labelDate=document.createElement('label');labelDate.textContent='Дата посещения';const labelTime=document.createElement('label');labelTime.textContent='Время посещения';
+ const notice=document.createElement('p');notice.className='muted';notice.textContent='Выбранное время — заявка, а не подтверждённая бронь. Мастер должен её подтвердить.';
+ const result=document.createElement('p');result.setAttribute('role','status');
+ submit.onclick=async()=>{
+ if(!selected.size){result.textContent='Выберите хотя бы одну услугу';return}
+ if(!date.value||!time.value){result.textContent='Выберите дату и время';return}
+ const start=new Date(date.value+'T'+time.value+':00+05:00');if(!(start.getTime()>Date.now())){result.textContent='Выберите будущую дату и время';return}
+ submit.disabled=true;result.textContent='Отправляем заявку…';
+ try{
+ const auth=api().getAuth();const user=auth.user;const services=[...selected.values()];
+ const payload={client_id:user.id,master_id:master.master_id,starts_at:start.toISOString(),status:'requested',client_phone:user.phone||auth.navo_phone||null,total_somoni:services.reduce((n,x)=>n+Number(x.price_somoni),0)};
+ const response=await fetch(api().ROOT+'/rest/v1/bookings',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+auth.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(payload)});
+ if(!response.ok){const e=await response.json().catch(()=>({}));throw Error(e.message||'Ошибка создания заявки')}
+ const created=await response.json();if(!created[0]?.id)throw Error('Не получен номер заявки');
+ await write('/rest/v1/navo_booking_services','POST',auth.access_token,services.map(x=>({booking_id:created[0].id,service_id:x.service_id,service_name:x.name,price_somoni:x.price_somoni})));
+ result.textContent='✓ Заявка отправлена мастеру. Посмотреть её можно в разделе «Мои записи».';
+ submit.textContent='Заявка отправлена';submit.disabled=true;
+ }catch(e){result.textContent='Не удалось отправить заявку: '+e.message;submit.disabled=false}
+ };
+ section.append(total,labelDate,date,labelTime,time,notice,submit,result);box.append(section);update();
+ }catch(e){message.textContent='Не удалось открыть услуги: '+e.message}
 }
 function observeCatalog(){
  const box=$('catalog-items');if(!box)return;
  const observer=new MutationObserver(()=>{
  for(const card of box.querySelectorAll('.item')){if(card.dataset.priceLink)return;const name=card.querySelector('strong');if(!name||card.querySelector('summary'))continue;
- card.dataset.priceLink='1';const button=document.createElement('button');button.className='primary full';button.type='button';button.textContent='Услуги и цены';button.onclick=async()=>{
+ card.dataset.priceLink='1';card.style.cursor='pointer';const button=document.createElement('button');button.className='primary full';button.type='button';button.textContent='Услуги и цены';button.onclick=async()=>{
  const rows=await read('/rest/v1/navo_test_master_catalog?select=*&limit=100',api().getAuth().access_token);
  const match=rows.find(x=>x.display_name===name.textContent);if(match)clientMaster(match);
- };card.append(button)}
+ };card.onclick=e=>{if(e.target.closest('button'))return;button.click()};card.append(button)}
  });observer.observe(box,{childList:true,subtree:false});
 }
 let editReady=false,registerReady=false,latestEdit=[];
