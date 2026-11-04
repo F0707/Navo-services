@@ -36,7 +36,7 @@ async function update(render){
  const card=document.createElement('div');card.className='item';const title=label('strong',(count?'🟡 '+count+' новых · ':'')+'Запись '+fmt(b.starts_at));const preview=label('p',(last.sender_id===uid?'Вы: ':'Клиент: ')+last.body);card.append(title,preview);
  const open=document.createElement('button');open.type='button';open.className='primary full';open.textContent='Открыть переписку и ответить';
  open.onclick=async()=>{const existing=card.querySelector('details');if(existing){existing.open=!existing.open;return}
- try{await markRead(b.id,uid,token);const chat=window.navoChatPanel(b.id,uid,token,!['cancelled','completed'].includes(b.status));card.append(chat);chat.open=true;await update(true)}catch(e){card.append(label('p','Ошибка: '+e.message))}};
+ try{await markRead(b.id,uid,token);const chat=window.navoChatPanel(b.id,uid,token,!['cancelled','completed'].includes(b.status));card.append(chat);chat.open=true;const tab=$('md-tab-inbox');if(tab)tab.textContent='💬 Сообщения';const banner=$('navo-unread-banner');if(banner)banner.hidden=true}catch(e){card.append(label('p','Ошибка: '+e.message))}};
  card.append(open);list.append(card)
  }
  }catch(e){const list=$('md-inbox-list');if(list&&!$('md-inbox')?.classList.contains('hide'))list.textContent='Не удалось загрузить сообщения: '+e.message}finally{busy=false}
