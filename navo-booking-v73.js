@@ -95,7 +95,15 @@ async function masterCards(){
  const box=$('md-'+kind+'-list');if(!box)continue;box.replaceChildren();
  for(const b of items){const card=document.createElement('div');card.className='item';card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
  const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));
- if(['confirmed','requested'].includes(b.status)){const code=document.createElement('input');code.placeholder='4-значный код клиента';code.inputMode='numeric';code.maxLength=4;const result=text('p','');card.append(code,button('Клиент обслужен — закрыть запись',async()=>{try{const ok=await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);if(!ok)throw Error('Неверный код. Проверьте четыре цифры.');await masterCards()}catch(e){result.textContent=e.message}}),result)}
+ if(['confirmed','requested'].includes(b.status)){
+ const panel=document.createElement('div');panel.hidden=true;panel.className='item';
+ panel.append(text('p','Попросите у клиента его четырёхзначный код после оказания услуги.'));
+ const code=document.createElement('input');code.type='text';code.placeholder='Введите 4 цифры';code.inputMode='numeric';code.pattern='[0-9]{4}';code.maxLength=4;code.autocomplete='off';
+ const result=text('p','');const confirm=button('Подтвердить обслуживание',async()=>{try{if(!/^[0-9]{4}$/.test(code.value))throw Error('Введите 4 цифры из кабинета клиента');confirm.disabled=true;const ok=await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);if(!ok)throw Error('Неверный код. Проверьте четыре цифры.');await masterCards()}catch(e){result.textContent=e.message;confirm.disabled=false}});
+ panel.append(code,confirm,result);
+ const arrive=button('Клиент пришёл',()=>{panel.hidden=!panel.hidden;arrive.textContent=panel.hidden?'Клиент пришёл':'Скрыть ввод кода';if(!panel.hidden)code.focus()});
+ card.append(arrive,panel)
+}
  if(b.status==='completed')card.append(text('p','✓ Обслуживание завершено'));
  box.append(card)}
  }
