@@ -160,4 +160,4 @@ window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,ge
 el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=73" defer></script><script src="./navo-booking-v73.js?v=80" defer></script><script src="./navo-inbox-v78.js?v=78" defer></script></body></html>
+</script><script src="./navo-prices-v72.js?v=73" defer></script><script src="./navo-booking-v73.js?v=80" defer></script><script src="./navo-inbox-v78.js?v=78" defer></script><script src="./navo-password-reset-v81.js?v=81" defer></script></body></html>
