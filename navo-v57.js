@@ -58,6 +58,15 @@ function installForm(){
  form.dataset.cloudV57='1';
  const warn=document.querySelector('.navo-save-warning');if(warn)warn.textContent='Профиль и услуги сохраняются в NAVO Supabase и доступны на других устройствах после входа.';
  const hint=form.querySelector('.navo-reg-submit p');if(hint)hint.textContent='Публикация только после подтверждения сохранения в облаке.';
+ const area=form.querySelector('.navo-reg-submit');
+ if(area&&!$('nv57-email-section')){
+  const section=document.createElement('div');section.id='nv57-email-section';
+  section.style.cssText='grid-column:1/-1;background:#eef6ec;border:1px solid #d2e3d0;border-radius:14px;padding:15px;margin-top:12px';
+  section.innerHTML='<h3>✉ Электронная почта</h3><p id="nv57-email-value">Проверяем адрес…</p><button type="button" class="btn ghost" id="nv57-email-change">Изменить или подтвердить почту</button>';
+  area.before(section);
+  section.querySelector('#nv57-email-change').onclick=()=>window.navoEmailStep();
+  who().then(u=>{const el=$('nv57-email-value');if(el)el.textContent=u.email?(u.email_confirmed_at?'✓ Подтверждена: ':'Не подтверждена: ')+u.email:'Почта ещё не добавлена';}).catch(()=>{const el=$('nv57-email-value');if(el)el.textContent='Войдите в аккаунт для просмотра почты';});
+ }
  form.addEventListener('submit',async e=>{
   e.preventDefault();e.stopImmediatePropagation();
   const btn=form.querySelector('[type="submit"]');btn.disabled=true;const label=btn.textContent;btn.textContent='Сохраняем в Supabase…';
