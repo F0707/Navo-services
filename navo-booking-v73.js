@@ -159,9 +159,18 @@ async function renderClientCards(){
  }
  updateBookingUnread().catch(console.error)
 }
+let masterRenderRunning=false,masterRenderQueued=false;
 async function masterCards(){
+ if(masterRenderRunning){masterRenderQueued=true;return}
+ masterRenderRunning=true;
+ try{await renderMasterCards()}finally{
+ masterRenderRunning=false;
+ if(masterRenderQueued){masterRenderQueued=false;masterCards().catch(console.error)}
+ }
+}
+async function renderMasterCards(){
  const s=api().getSession();if(!s)return;
- const rows=await get('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(s.user.id)+'&order=starts_at.asc&limit=200',s.access_token);
+ const rawRows=await get('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(s.user.id)+'&order=starts_at.asc&limit=200',s.access_token);const rows=[...new Map(rawRows.map(b=>[b.id,b])).values()];
  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const dateKey=x=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(x));
  try{const summary=await get('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+s.user.id,s.access_token);const dash=$('ml-dashboard');if(dash){let rating=$('navo-master-rating');if(!rating){rating=document.createElement('p');rating.id='navo-master-rating';dash.insertBefore(rating,dash.firstChild)}rating.textContent=summary.length?'⭐ Рейтинг мастера: '+summary[0].average_stars+' / 5 · Оценок: '+summary[0].reviews_count:'⭐ Рейтинг мастера: пока нет оценок'}}catch(e){}
