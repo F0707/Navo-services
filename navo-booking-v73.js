@@ -97,5 +97,5 @@ async function masterCards(){
  box.append(card)}
  }
 }
-document.addEventListener('DOMContentLoaded',()=>{attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>setTimeout(()=>clientCards().catch(console.error),150));window.addEventListener('navo-master-open',()=>setTimeout(()=>masterCards().catch(console.error),200));window.addEventListener('navo-master-bookings-loaded',()=>masterCards().catch(console.error));});
+document.addEventListener('DOMContentLoaded',()=>{attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>setTimeout(()=>clientCards().catch(console.error),150));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>setTimeout(()=>masterCards().catch(console.error),200));window.addEventListener('navo-master-bookings-loaded',()=>masterCards().catch(console.error));});
 })();
