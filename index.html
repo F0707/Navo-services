@@ -1137,7 +1137,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    let r=await fetch(ROOT+'/auth/v1/user',{headers:{apikey:KEY,Authorization:'Bearer '+a.access_token}});let u=await r.json();if(!r.ok)throw Error('Повторно войдите по SMS');
    if(!u.phone||!u.phone_confirmed_at){info.textContent='Телефон ещё не подтверждён';button.textContent='Войти по SMS';button.disabled=false;button.onclick=()=>navoNeedLogin('Нужно подтвердить телефон');return}
    info.textContent='✓ Подтверждённый номер: '+u.phone;
-   if(u.email&&u.email_confirmed_at&&!u.new_email){ready=true;button.textContent='Продолжить в кабинет мастера';button.disabled=false;button.onclick=()=>{window.navoNewMaster()};}
+   if(u.email&&u.email_confirmed_at&&!u.new_email){ready=true;info.textContent='✓ Подтверждённый номер: '+u.phone+' · ✓ Почта: '+u.email;button.textContent='Продолжить в кабинет мастера';button.disabled=false;button.onclick=()=>{window.navoNewMaster()};error.innerHTML='';var em=document.createElement('button');em.type='button';em.className='btn ghost';em.style.cssText='width:100%;margin-top:12px';em.textContent='Изменить электронную почту';em.onclick=()=>window.navoEmailStep();error.appendChild(em);}
    else {button.textContent='Подтвердить электронную почту';button.disabled=false;button.onclick=()=>window.navoEmailStep();error.textContent='Электронная почта необходима для регистрации мастера.'}
   }catch(e){info.textContent='Не удалось проверить аккаунт';error.textContent=e.message||String(e);button.textContent='Повторить проверку';button.disabled=false;button.onclick=check}
  }
