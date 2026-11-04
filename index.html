@@ -83,7 +83,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-toggle-pas
 el('ml-back').onclick=()=>show('catalog');
 el('ml-submit').onclick=async()=>{
  const email=el('ml-email').value.trim().toLowerCase(),password=el('ml-password').value,button=el('ml-submit'),status=el('ml-status');
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!password){status.textContent='Введите почту и пароль';return}
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!password){status.textContent='Введите почту и пароль';return}
  button.disabled=true;status.textContent='Проверяем данные…';
  try{
   const signed=await request('/auth/v1/token?grant_type=password',{email,password});
