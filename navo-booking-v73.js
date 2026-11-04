@@ -44,10 +44,14 @@ async function openMaster(master){
 async function attachMasterCards(){
  const box=$('catalog-items');if(!box||box.dataset.navoBookingWired)return;box.dataset.navoBookingWired='1';
  box.addEventListener('click',async e=>{
- const card=e.target.closest('.item');if(!card||!box.contains(card))return;
- if(e.target.closest('button')){if(e.target.textContent?.includes('Услуги и цены')){e.preventDefault();e.stopImmediatePropagation()}else return}
- const name=card.querySelector('strong')?.textContent;if(!name)return;
- try{const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100');const master=masters.find(x=>x.display_name===name);if(master)await openMaster(master)}catch(err){alert('Не удалось открыть мастера: '+err.message)}
+ const card=e.target.closest('.navo-master-card,.item');if(!card||!box.contains(card))return;
+ if(e.target.closest('button'))return;
+ try{
+ const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100');
+ const master=card.dataset.masterId?masters.find(x=>String(x.master_id)===card.dataset.masterId):masters.find(x=>x.display_name===card.querySelector('strong')?.textContent);
+ if(master)await openMaster(master);
+ }catch(err){alert('Не удалось открыть мастера: '+err.message)}
+
  },true);
 }
 async function markChatRead(bookingId,viewerId,accessToken){
