@@ -1144,7 +1144,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  // Replace the old direct role toggle with a verified onboarding screen.
  window.addEventListener('DOMContentLoaded',()=>{
   const role=document.getElementById('role');if(role){role.onclick=()=>{if(view==='master'||view==='register'){window.location.reload()}else screen()};role.textContent='Стать мастером'}
-  const observer=new MutationObserver(()=>{if(view==='catalog'&&role)role.textContent='Стать мастером'});
+  const observer=new MutationObserver(()=>{if(view==='catalog'&&role&&role.textContent!=='Стать мастером')role.textContent='Стать мастером'});
   if(role)observer.observe(role,{childList:true});
  });
  window.nv51MasterEntry=screen;
