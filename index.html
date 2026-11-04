@@ -37,7 +37,7 @@ async function catalog(){
  }catch(e){el('catalog-status').textContent='Каталог временно недоступен: '+e.message}
 }
 async function services(){try{const rows=await request('/rest/v1/service_catalog?select=category,name&order=category.asc,name.asc&limit=500',null,auth.access_token,'GET');const box=el('service-items');box.replaceChildren();const groups={};for(const item of rows){(groups[item.category]??=[]).push(item.name)}for(const [name,items] of Object.entries(groups)){const section=document.createElement('details');section.className='item';const summary=document.createElement('summary');summary.style.cssText='cursor:pointer;font-weight:700;padding:7px 0';summary.textContent=name+' ('+items.length+')';section.append(summary);const ul=document.createElement('ul');for(const item of items){const li=document.createElement('li');li.textContent=item;li.style.padding='5px 0';ul.append(li)}section.append(ul);box.append(section)}}catch(e){el('service-items').textContent='Не удалось загрузить услуги: '+e.message}}
-async function bookings(){try{const u=await current(),rows=await request('/rest/v1/bookings?select=id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(u.id)+'&order=starts_at.desc&limit=100',null,auth.access_token,'GET');el('bookings-status').textContent=rows.length?'Ваши записи':'Пока нет записей';el('bookings-items').replaceChildren();for(const row of rows){const p=document.createElement('p');p.className='item';p.textContent=new Date(row.starts_at).toLocaleString('ru-RU')+' · '+row.status+' · '+row.total_somoni+' сомони';el('bookings-items').append(p)}window.dispatchEvent(new Event('navo-client-bookings-loaded'))}catch(e){el('bookings-status').textContent='Не удалось загрузить записи: '+e.message}}
+async function bookings(){window.dispatchEvent(new Event('navo-client-bookings-loaded'))}
 
 const reg={email:'',verified:false};
 function masterStatus(t){const x=el('mr-status');if(x)x.textContent=t}
@@ -107,14 +107,7 @@ const mstatus=(id,t)=>{const e=el(id);if(e)e.textContent=t};
 function masterTab(id){for(const k of ['today','upcoming','profile']){el('md-'+k).classList.toggle('hide',k!==id);el('md-tab-'+k).className=k===id?'primary':'secondary'}}
 for(const k of ['today','upcoming','profile'])el('md-tab-'+k).onclick=()=>masterTab(k);
 function masterBookingRow(b){const d=document.createElement('div');d.className='item';const when=document.createElement('strong');when.textContent=new Date(b.starts_at).toLocaleString('ru-RU',{timeZone:'Asia/Dushanbe',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});const info=document.createElement('p');info.textContent='Клиент: '+(b.client_phone||'номер не указан')+' · '+b.status+' · '+(b.total_somoni??'—')+' сомони';d.append(when,info);return d}
-async function masterBookings(){
- const uid=masterSession.user.id,token=masterSession.access_token;
- const rows=await request('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(uid)+'&order=starts_at.asc&limit=200',null,token,'GET');
- const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const dayOf=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d));
- const now=Date.now(),todays=rows.filter(x=>dayOf(x.starts_at)===today),future=rows.filter(x=>new Date(x.starts_at).getTime()>=now);
- for(const [kind,items] of [['today',todays],['upcoming',future]]){const list=el('md-'+kind+'-list');list.replaceChildren();mstatus('md-'+kind+'-status',items.length?'Всего записей: '+items.length:'Записей пока нет');for(const b of items)list.append(masterBookingRow(b))}window.dispatchEvent(new Event('navo-master-bookings-loaded'));
-}
+async function masterBookings(){window.dispatchEvent(new Event('navo-master-bookings-loaded'))}
 async function masterEditLoad(){
  const p=masterProfile;for(const [id,key] of [['md-name','full_name'],['md-phone','phone'],['md-city','city'],['md-address','work_address']])el(id).value=p[key]||'';
  const box=el('md-services');box.replaceChildren();const rows=await request('/rest/v1/service_catalog?select=id,name,category&order=category.asc,name.asc&limit=500',null,masterSession.access_token,'GET');
@@ -227,4 +220,4 @@ window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,ge
 el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=73" defer></script><script src="./navo-booking-v73.js?v=86" defer></script><script src="./navo-inbox-v78.js?v=78" defer></script></body></html>
+</script><script src="./navo-prices-v72.js?v=73" defer></script><script src="./navo-booking-v73.js?v=87" defer></script><script src="./navo-inbox-v78.js?v=78" defer></script></body></html>
