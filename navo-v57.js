@@ -143,7 +143,7 @@ function masterChoice(){
  const b=overlay('NAVO · Я мастер','<p>Выберите действие.</p><button class="btn full" id="nv65-existing" type="button">У меня уже есть аккаунт — войти по SMS</button><button class="btn ghost full" id="nv59-enter" type="button" style="margin-top:10px">Войти по почте и паролю</button><button class="btn ghost full" id="nv59-register" type="button" style="margin-top:10px">Регистрация нового мастера</button><p style="font-size:13px">Если пароль ещё не создавали, выберите вход по SMS. Данные существующего аккаунта сохранятся.</p>');
  $('nv65-existing').onclick=()=>{b.remove();smsMasterAccess()};
  $('nv59-enter').onclick=()=>{b.remove();emailLogin()};
- $('nv59-register').onclick=async()=>{b.remove();try{const u=await who();if(!u.phone_confirmed_at)throw Error('Подтвердите номер по SMS');const found=await syncMaster();if(found){view='master';render();alert('Ваш кабинет уже существует. Повторная регистрация не нужна.');}else{navoEditingMaster=false;view='register';render();}}catch(e){smsMasterAccess()}};
+ $('nv59-register').onclick=async()=>{b.remove();try{const u=await who();if(!u.phone_confirmed_at)throw Error('Подтвердите номер по SMS');const found=await syncMaster();if(found){view='master';render();alert('Ваш кабинет уже существует. Повторная регистрация не нужна.');}else{navoEditingMaster=false;view='register';try{render()}catch(err){document.querySelector('#app').innerHTML='<section style="padding:20px"><h2>Ошибка открытия анкеты</h2><p id="nv66-error"></p></section>';document.getElementById('nv66-error').textContent=err.message;console.error(err)};}}catch(e){smsMasterAccess()}};
 }
 function firstVisit(){
  if(session()?.access_token||sessionStorage.getItem('nv57-visited'))return;
