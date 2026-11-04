@@ -72,7 +72,7 @@ async function submitMaster(){
   const photo_url=ROOT+'/storage/v1/object/public/master-photos/'+path;
   await request('/auth/v1/user',{password},auth.access_token,'PUT');
   const row={user_id:u.id,full_name:get('mr-name'),phone:get('mr-phone'),email:reg.email,passport_number:get('mr-passport'),city:get('mr-city'),work_address:get('mr-address'),photo_url,services,status:'pending'};
-  await request('/rest/v1/master_applications?on_conflict=user_id',row,auth.access_token,'POST');
+  await request('/rest/v1/master_applications?on_conflict=user_id',row,auth.access_token,'POST');window.dispatchEvent(new Event('navo-master-registered'));
   masterStatus('✓ Анкета сохранена. Мастер доступен в каталоге NAVO. Пароль сохранён для будущего входа.');
   el('mr-submit').disabled=true;el('mr-password').value='';el('mr-password2').value='';
  }catch(e){masterStatus('Ошибка: '+e.message);btn.disabled=false}
@@ -117,7 +117,7 @@ el('md-save').onclick=async()=>{
   }
   const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(uid),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(row)});
   const data=await res.json().catch(()=>[]);if(!res.ok)throw Error(data.message||'Ошибка сохранения '+res.status);if(!data.length)throw Error('Редактирование этой анкеты пока ограничено её статусом');
-  masterProfile={...p,...data[0]};mstatus('md-save-status','✓ Изменения сохранены');el('ml-profile-info').textContent=masterProfile.full_name+' · '+masterProfile.city+' · '+masterProfile.work_address;
+  masterProfile={...p,...data[0]};window.dispatchEvent(new Event('navo-master-saved'));mstatus('md-save-status','✓ Изменения сохранены');el('ml-profile-info').textContent=masterProfile.full_name+' · '+masterProfile.city+' · '+masterProfile.work_address;
  }catch(e){mstatus('md-save-status','Ошибка: '+e.message)}finally{btn.disabled=false}
 };
 el('md-send-email').onclick=async()=>{
@@ -149,13 +149,14 @@ el('ml-submit').onclick=async()=>{
   save({...signed,expires_at:Date.now()+(Number(signed.expires_in)||3600)*1000});
   status.textContent='Вход выполнен. Анкета мастера: '+('доступна для тестирования')+'.';
   el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address;
-  await masterOpen(signed,p);
+  await masterOpen(signed,p);window.dispatchEvent(new Event('navo-master-open'));
   el('account-phone').textContent=signed.user.phone||'';
   el('profile-phone').textContent=signed.user.phone||'';
  }catch(e){status.textContent='Ошибка входа: '+(e.message==='Invalid login credentials'?'Неверная почта или пароль':e.message)}
  finally{button.disabled=false}
 };
 
+window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,show,catalog,masterEditLoad};
 el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
 })();
