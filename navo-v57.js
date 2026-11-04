@@ -94,11 +94,34 @@ function masterButtons(){
  if($('nv58-master-account'))return;
  const panel=document.createElement('section');panel.id='nv58-master-account';
  panel.style.cssText='margin:12px auto 20px;padding:18px;background:#fff;border:1px solid #cbdccf;border-radius:18px;max-width:900px;color:#173f35;display:grid;gap:10px';
- panel.innerHTML='<h2 style="font-size:21px;margin:0">Мой аккаунт мастера</h2><p id="nv58-email-label" style="margin:0">Электронная почта: проверяем…</p><button class="btn ghost full" id="nv58-email" type="button">✉ Электронная почта — посмотреть или изменить</button><button class="btn ghost full" id="nv58-logout" type="button" style="border:2px solid #a54b40;color:#a54b40">Выйти из аккаунта</button>';
+ panel.innerHTML='<h2 style="font-size:21px;margin:0">Аккаунт мастера</h2><p id="nv58-email-label">Электронная почта: проверяем…</p><button class="btn full" id="nv59-edit" type="button">✎ Изменить профиль мастера</button><button class="btn ghost full" id="nv58-email" type="button">✉ Электронная почта</button><button class="btn ghost full" id="nv59-password" type="button">🔑 Установить или изменить пароль</button><button class="btn ghost full" id="nv58-logout" type="button" style="border:2px solid #a54b40;color:#a54b40">Выйти из аккаунта</button>';
  app.prepend(panel);
- $('nv58-email').onclick=()=>{if(typeof window.navoEmailStep==='function')window.navoEmailStep();else alert('Откройте NAVO аккаунт для изменения электронной почты');};
+ $('nv59-edit').onclick=async()=>{try{await syncMaster();if(navoCurrentMaster())navoEditMaster();else window.navoNewMaster();}catch(e){alert(e.message)}};
+ $('nv58-email').onclick=()=>{if(typeof window.navoEmailStep==='function')window.navoEmailStep();else alert('Подтверждение почты недоступно');};
+ $('nv59-password').onclick=()=>passwordSetup();
  $('nv58-logout').onclick=signOutMaster;
- who().then(u=>{const el=$('nv58-email-label');if(el)el.textContent=u.email?'Электронная почта: '+u.email+(u.email_confirmed_at?' ✓ подтверждена':' — не подтверждена'):'Электронная почта ещё не указана';}).catch(()=>{const el=$('nv58-email-label');if(el)el.textContent='Для просмотра почты войдите в NAVO аккаунт';});
+ who().then(u=>{const el=$('nv58-email-label');if(el)el.textContent=u.email?'Электронная почта: '+u.email+(u.email_confirmed_at?' ✓ подтверждена':' — не подтверждена'):'Электронная почта ещё не указана';}).catch(()=>{const el=$('nv58-email-label');if(el)el.textContent='Войдите в NAVO аккаунт';});
+}
+function overlay(title,body){
+ const box=document.createElement('div');box.id='nv59-overlay';box.style.cssText='position:fixed;inset:0;z-index:18000;background:#09241dcc;display:grid;place-items:center;padding:16px;overflow:auto';
+ box.innerHTML='<section style="background:#fff;color:#173f35;border-radius:20px;padding:22px;width:min(430px,100%);max-height:92vh;overflow:auto"><h2>'+esc(title)+'</h2>'+body+'<button type="button" class="btn ghost full" id="nv59-close" style="margin-top:12px">Закрыть</button></section>';
+ document.body.append(box);$('nv59-close').onclick=()=>box.remove();return box;
+}
+async function passwordSetup(){
+ let u;try{u=await who();}catch(e){alert(e.message);return}
+ if(!u.email||!u.email_confirmed_at){alert('Сначала подтвердите почту в разделе «Электронная почта».');return}
+ const b=overlay('Пароль мастера','<p>Для входа с другого устройства используйте подтверждённую почту и пароль. Имя мастера отображается в профиле, но не заменяет электронную почту для входа.</p><label>Новый пароль (не менее 8 символов)<input id="nv59-newpass" type="password" minlength="8" autocomplete="new-password" style="width:100%;padding:12px"></label><button class="btn full" id="nv59-savepass" type="button">Сохранить пароль</button><p id="nv59-msg"></p>');
+ $('nv59-savepass').onclick=async()=>{const p=$('nv59-newpass').value;if(p.length<8){$('nv59-msg').textContent='Минимум 8 символов';return}try{await api('/auth/v1/user','PUT',{password:p});$('nv59-msg').textContent='✓ Пароль установлен. Вход по почте доступен после подтверждения адреса.';$('nv59-newpass').value='';}catch(e){$('nv59-msg').textContent='Ошибка: '+e.message}};
+}
+async function emailLogin(){
+ const b=overlay('Войти как мастер','<p>Введите подтверждённую электронную почту и пароль мастера.</p><label>Электронная почта<input id="nv59-loginemail" type="email" autocomplete="email" style="width:100%;padding:12px"></label><label>Пароль<input id="nv59-loginpass" type="password" autocomplete="current-password" style="width:100%;padding:12px"></label><button class="btn full" id="nv59-signin" type="button">Войти в кабинет мастера</button><button class="btn ghost full" id="nv59-forgot" type="button">Забыли пароль?</button><p id="nv59-loginmsg"></p>');
+ $('nv59-signin').onclick=async()=>{const email=$('nv59-loginemail').value.trim(),password=$('nv59-loginpass').value;const msg=$('nv59-loginmsg');msg.textContent='Проверяем данные…';try{const res=await fetch(ROOT+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});const v=await res.json();if(!res.ok||!v.access_token)throw Error(v.msg||v.error_description||v.error||'Неверная почта или пароль');v.expires_at=Date.now()+(Number(v.expires_in)||3600)*1000;localStorage.setItem(AK,JSON.stringify(v));sessionStorage.setItem(AK,JSON.stringify(v));b.remove();const found=await syncMaster();if(found){view='master';render();}else alert('Вы вошли, но профиль мастера ещё не создан. Нажмите «Регистрация мастера».');}catch(e){msg.textContent='Ошибка: '+e.message}};
+ $('nv59-forgot').onclick=async()=>{const email=$('nv59-loginemail').value.trim(),msg=$('nv59-loginmsg');if(!email){msg.textContent='Сначала введите почту';return}try{const r=await fetch(ROOT+'/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});if(!r.ok)throw Error('Не удалось отправить письмо');msg.textContent='Письмо для восстановления отправлено. Следуйте инструкции в письме.';}catch(e){msg.textContent=e.message}};
+}
+function masterChoice(){
+ const b=overlay('NAVO · Я мастер','<p>Выберите способ входа.</p><button class="btn full" id="nv59-enter" type="button">Войти — у меня есть кабинет мастера</button><button class="btn ghost full" id="nv59-register" type="button" style="margin-top:10px">Регистрация нового мастера</button><p style="font-size:13px">Клиент продолжает пользоваться NAVO по SMS без пароля. Мастер может входить по электронной почте и паролю.</p>');
+ $('nv59-enter').onclick=()=>{b.remove();emailLogin()};
+ $('nv59-register').onclick=()=>{b.remove();window.navoMasterEntry()};
 }
 function firstVisit(){
  if(session()?.access_token||sessionStorage.getItem('nv57-visited'))return;
@@ -112,7 +135,12 @@ function firstVisit(){
 let lastUser='',busy=false;
 async function recover(){if(busy||!session()?.access_token)return;busy=true;try{const u=await who();if(u.id!==lastUser){lastUser=u.id;await syncMaster();if(view==='master')render();}}catch(e){}finally{busy=false;}}
 const observer=new MutationObserver(()=>{installForm();if(view==='master')masterButtons();});
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded',()=>{ 
+ const roleBtn=$('role');
+ if(roleBtn)roleBtn.addEventListener('click',e=>{if(view==='catalog'||view==='bookings'){e.stopImmediatePropagation();masterChoice();}},true);
+ const nav=document.querySelector('header nav');
+ if(nav)nav.addEventListener('click',e=>{const button=e.target.closest('button[data-view]');if(!button)return;e.preventDefault();e.stopImmediatePropagation();view=button.dataset.view;render();},true);
+ 
  observer.observe($('app'),{childList:true,subtree:true});
  installForm();masterButtons();firstVisit();recover();
  setInterval(recover,12000);
