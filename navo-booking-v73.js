@@ -76,7 +76,7 @@ async function masterCards(){
  const box=$('md-'+kind+'-list');if(!box)continue;box.replaceChildren();
  for(const b of items){const card=document.createElement('div');card.className='item';card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
  const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));
- if(b.status==='confirmed'){const code=document.createElement('input');code.placeholder='4-значный код клиента';code.inputMode='numeric';code.maxLength=4;const result=text('p','');card.append(code,button('Клиент обслужен — закрыть запись',async()=>{try{await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);await masterCards()}catch(e){result.textContent=e.message}}),result)}
+ if(b.status==='confirmed'){const code=document.createElement('input');code.placeholder='4-значный код клиента';code.inputMode='numeric';code.maxLength=4;const result=text('p','');card.append(code,button('Клиент обслужен — закрыть запись',async()=>{try{const ok=await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);if(!ok)throw Error('Неверный код. Проверьте четыре цифры.');await masterCards()}catch(e){result.textContent=e.message}}),result)}
  if(b.status==='completed')card.append(text('p','✓ Обслуживание завершено'));
  box.append(card)}
  }
