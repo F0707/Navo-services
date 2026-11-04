@@ -73,6 +73,7 @@ function chatPanel(bookingId,viewerId,accessToken,active){
  const details=document.createElement('details');details.append(Object.assign(document.createElement('summary'),{textContent:'Открыть чат'}),wrap);details.addEventListener('toggle',()=>{if(details.open)refresh()});return details
 }
 let clientRenderRunning=false,clientRenderQueued=false;
+window.navoChatPanel=chatPanel;
 async function clientCards(){if(clientRenderRunning){clientRenderQueued=true;return}clientRenderRunning=true;try{await renderClientCards()}finally{clientRenderRunning=false;if(clientRenderQueued){clientRenderQueued=false;clientCards().catch(console.error)}}}
 async function renderClientCards(){
  const box=$('bookings-items');if(!box)return;
