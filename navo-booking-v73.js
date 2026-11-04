@@ -52,17 +52,33 @@ async function attachMasterCards(){
 }
 async function clientCards(){
  const box=$('bookings-items');if(!box)return;
- const rows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(api().getAuth().user.id)+'&order=starts_at.desc&limit=100');
+ const user=api().getAuth()?.user;if(!user)return;
+ const rows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');
  box.replaceChildren();if(!rows.length){box.append(text('p','У вас пока нет записей'));return}
  for(const b of rows){
- const card=document.createElement('div');card.className='item';card.append(text('strong',dateText(b.starts_at)),text('p','Статус: '+(b.status==='completed'?'Обслуживание завершено':'Запись подтверждена')+' · '+b.total_somoni+' сомони'));
- const items=await get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id);card.append(text('p',items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; ')));
- if(b.status!=='completed'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code)card.append(text('h3','Код посещения: '+code))}catch(e){}}
+ const card=document.createElement('div');card.className='item';
+ const title=text('strong',dateText(b.starts_at));const status=text('p','Статус: '+({completed:'Обслуживание завершено',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status)+' · '+b.total_somoni+' сомони');
+ const detail=document.createElement('div');detail.hidden=true;card.append(title,status);
+ const toggle=button('Открыть запись',()=>{detail.hidden=!detail.hidden;toggle.textContent=detail.hidden?'Открыть запись':'Свернуть запись'});card.append(toggle,detail);
+ const items=await get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id);
+ detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Услуги не указаны'));
+ if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code)detail.append(text('h3','Код посещения: '+code))}catch(e){}}
+ if(['requested','confirmed'].includes(b.status)){
+ const edit=button('Изменить дату и время',()=>{form.hidden=!form.hidden});const form=document.createElement('div');form.hidden=true;
+ const date=document.createElement('input');date.type='date';const time=document.createElement('input');time.type='time';time.step=1800;
+ const currentDate=new Date(b.starts_at);const fmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(currentDate).replace(' ','T');
+ date.value=fmt.slice(0,10);date.min=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());time.value=fmt.slice(11,16);
+ const feedback=text('p','');
+ const save=button('Сохранить новое время',async()=>{try{if(!date.value||!time.value)throw Error('Выберите дату и время');const dt=new Date(date.value+'T'+time.value+':00+05:00');if(!Number.isFinite(dt.getTime()))throw Error('Некорректная дата');save.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'reschedule',p_starts:dt.toISOString()});await clientCards()}catch(e){feedback.textContent='Ошибка: '+e.message;save.disabled=false}});
+ form.append(text('p','Новая дата'),date,text('p','Новое время'),time,save,feedback);
+ const cancel=button('Отменить запись',async()=>{if(!confirm('Отменить эту запись? Это действие нельзя отменить.'))return;try{cancel.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'cancel'});await clientCards()}catch(e){alert('Ошибка отмены: '+e.message);cancel.disabled=false}});
+ cancel.className='secondary full';detail.append(edit,form,cancel)
+ }
  if(b.status==='completed'){
  const reviews=await get('/rest/v1/navo_reviews?select=stars&booking_id=eq.'+b.id);
- if(reviews.length)card.append(text('p','Ваша оценка: '+('★'.repeat(reviews[0].stars))));else{
+ if(reviews.length)detail.append(text('p','Ваша оценка: '+('★'.repeat(reviews[0].stars))));else{
  const row=document.createElement('div');row.append(text('p','Оцените мастера:'));
- for(let n=1;n<=5;n++){const star=button(n+' ★',async()=>{try{await rpc('navo_rate_booking',{p_booking:b.id,p_stars:n});await clientCards()}catch(e){alert(e.message)}});star.style.cssText='width:18%;display:inline-block;margin-right:1%;padding:10px 0';row.append(star)}card.append(row)
+ for(let n=1;n<=5;n++){const star=button(n+' ★',async()=>{try{await rpc('navo_rate_booking',{p_booking:b.id,p_stars:n});await clientCards()}catch(e){alert(e.message)}});star.style.cssText='width:18%;display:inline-block;margin-right:1%;padding:10px 0';row.append(star)}detail.append(row)
  }}
  box.append(card)
  }
