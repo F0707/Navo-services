@@ -54,6 +54,15 @@ async function markChatRead(bookingId,viewerId,accessToken){
  const response=await fetch(api().ROOT+'/rest/v1/navo_message_reads?on_conflict=booking_id,user_id',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:JSON.stringify({booking_id:bookingId,user_id:viewerId,last_read_at:new Date().toISOString()})});
  if(response.ok){const dot=document.querySelector('[data-booking-card="'+bookingId+'"] [data-unread-dot]');if(dot){dot.hidden=true;dot.style.display='none'}}
 }
+let navoAudio=null,navoAudioReady=false;const navoSeenMessages=new Map();
+function navoTone(kind){
+ if(!navoAudioReady)return;
+ try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;navoAudio=navoAudio||new C();if(navoAudio.state==='suspended')navoAudio.resume();
+ const now=navoAudio.currentTime,notes=kind==='incoming'?[660,880]:[740,590];
+ notes.forEach((hz,i)=>{const osc=navoAudio.createOscillator(),gain=navoAudio.createGain();osc.type='sine';osc.frequency.value=hz;gain.gain.setValueAtTime(0.0001,now+i*0.13);gain.gain.exponentialRampToValueAtTime(0.045,now+i*0.13+0.02);gain.gain.exponentialRampToValueAtTime(0.0001,now+i*0.13+0.19);osc.connect(gain);gain.connect(navoAudio.destination);osc.start(now+i*0.13);osc.stop(now+i*0.13+0.2)})
+ }catch(e){}
+}
+document.addEventListener('pointerdown',()=>{navoAudioReady=true},{once:true});
 async function updateBookingUnread(){
  const session=api()?.getSession?.(),masterView=!!session?.access_token&&!$('ml-dashboard')?.classList.contains('hide');
  const auth=masterView?session:api()?.getAuth?.();if(!auth?.access_token||!auth?.user?.id)return;
@@ -65,6 +74,9 @@ async function updateBookingUnread(){
  get('/rest/v1/navo_message_reads?select=booking_id,last_read_at&user_id=eq.'+encodeURIComponent(uid),auth.access_token)]);
  const last=new Map(reads.map(x=>[x.booking_id,new Date(x.last_read_at).getTime()]));const counts=new Map();
  for(const m of msgs){if(m.sender_id!==uid&&new Date(m.created_at).getTime()>(last.get(m.booking_id)||0))counts.set(m.booking_id,(counts.get(m.booking_id)||0)+1)}
+ const key=role+':'+uid;const latest=msgs.filter(m=>m.sender_id!==uid).reduce((max,m)=>Math.max(max,new Date(m.created_at).getTime()),0);
+ if(navoSeenMessages.has(key)&&latest>navoSeenMessages.get(key))navoTone('incoming');
+ navoSeenMessages.set(key,Math.max(latest,navoSeenMessages.get(key)||0));
  for(const card of document.querySelectorAll('[data-booking-card]')){const count=counts.get(card.dataset.bookingCard)||0;let dot=card.querySelector('[data-unread-dot]');if(!dot){dot=document.createElement('span');dot.dataset.unreadDot='1';dot.style.cssText='display:inline-block;background:#f7c94a;color:#3a2b00;border-radius:30px;padding:5px 10px;margin:8px 0;font-weight:700';card.insertBefore(dot,card.firstChild)}dot.textContent='🟡 '+count+' новых сообщений';dot.hidden=!count;dot.style.display=count?'inline-block':'none'}
  const clientTab=$('tab-bookings');if(clientTab&&!masterView){const n=[...counts.values()].reduce((a,b)=>a+b,0);clientTab.textContent=n?'Мои записи 🟡 '+n:'Мои записи'}
 }
@@ -77,7 +89,7 @@ function chatPanel(bookingId,viewerId,accessToken,active){
  const send=button('Отправить сообщение',async()=>{const body=input.value.trim();if(!body)return;send.disabled=true;try{
  const response=await fetch(api().ROOT+'/rest/v1/navo_booking_messages',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({booking_id:bookingId,sender_id:viewerId,body})});
  if(!response.ok){const err=await response.json().catch(()=>({}));throw Error(err.message||'Не удалось отправить сообщение')}
- input.value='';await refresh()
+ input.value='';navoTone('outgoing');await refresh()
  }catch(e){status.textContent='Ошибка: '+e.message}finally{send.disabled=false}});
  const refresh=async()=>{try{const rows=await get('/rest/v1/navo_booking_messages?select=id,sender_id,body,created_at&booking_id=eq.'+bookingId+'&order=created_at.asc&limit=100',accessToken);
  messages.replaceChildren();if(!rows.length)messages.append(text('p','Сообщений пока нет'));
