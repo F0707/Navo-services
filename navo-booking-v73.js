@@ -52,8 +52,11 @@ async function attachMasterCards(){
 }
 async function markChatRead(bookingId,viewerId,accessToken){
  const response=await fetch(api().ROOT+'/rest/v1/navo_message_reads?on_conflict=booking_id,user_id',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:JSON.stringify({booking_id:bookingId,user_id:viewerId,last_read_at:new Date().toISOString()})});
- if(response.ok){const dot=document.querySelector('[data-booking-card="'+bookingId+'"] [data-unread-dot]');if(dot){dot.hidden=true;dot.style.display='none'}}
+ if(response.ok){const dot=document.querySelector('[data-booking-card="'+bookingId+'"] [data-unread-dot]');if(dot){dot.hidden=true;dot.style.display='none'}const card=document.querySelector('[data-booking-card="'+bookingId+'"]');if(card){card.querySelectorAll('[data-chat-unread]').forEach(x=>x.hidden=true);card.querySelectorAll('.navo-chat').forEach(x=>x.classList.remove('has-unread'))}}
 }
+const chatCss=document.createElement('style');chatCss.textContent=`
+.navo-chat{margin:14px 0 18px}.navo-chat-button{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;border:1px solid #c8ded2;border-radius:17px;background:#e7f2eb;color:#174c3d;padding:13px 16px;font-weight:700;min-height:62px;box-shadow:0 2px 7px #0a302014}.navo-chat-button::-webkit-details-marker{display:none}.navo-chat-glyph{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#174c3d;color:white;font-size:22px;flex-shrink:0}.navo-chat-title{flex:1}.navo-chat-dot{display:none;background:#f8c52a;color:#342700;border-radius:999px;min-width:25px;height:25px;padding:0 6px;align-items:center;justify-content:center;font-size:13px;box-shadow:0 0 0 3px #fff5c2}.navo-chat.has-unread .navo-chat-dot{display:flex;animation:navoPulse 1.5s ease-in-out infinite}.navo-chat.has-unread .navo-chat-button{border:2px solid #e2ac13;background:#fff6d6}.navo-chat[open]>.navo-chat-button{border-radius:17px 17px 8px 8px}.navo-chat .item{margin-top:5px!important}.navo-chat [data-chat-unread][hidden]{display:none!important}@keyframes navoPulse{0%,100%{box-shadow:0 0 0 2px #fff5c2;opacity:1}50%{box-shadow:0 0 0 8px #f8c52a40;opacity:.65}}
+`;document.head.append(chatCss);
 let navoAudio=null,navoAudioReady=false;const navoSeenMessages=new Map();
 function navoTone(kind){
  if(!navoAudioReady)return;
@@ -77,7 +80,10 @@ async function updateBookingUnread(){
  const key=role+':'+uid;const latest=msgs.filter(m=>m.sender_id!==uid).reduce((max,m)=>Math.max(max,new Date(m.created_at).getTime()),0);
  if(navoSeenMessages.has(key)&&latest>navoSeenMessages.get(key))navoTone('incoming');
  navoSeenMessages.set(key,Math.max(latest,navoSeenMessages.get(key)||0));
- for(const card of document.querySelectorAll('[data-booking-card]')){const count=counts.get(card.dataset.bookingCard)||0;let dot=card.querySelector('[data-unread-dot]');if(!dot){dot=document.createElement('span');dot.dataset.unreadDot='1';dot.style.cssText='display:inline-block;background:#f7c94a;color:#3a2b00;border-radius:30px;padding:5px 10px;margin:8px 0;font-weight:700';card.insertBefore(dot,card.firstChild)}dot.textContent='🟡 '+count+' новых сообщений';dot.hidden=!count;dot.style.display=count?'inline-block':'none'}
+ for(const card of document.querySelectorAll('[data-booking-card]')){const count=counts.get(card.dataset.bookingCard)||0;
+ for(const bubble of card.querySelectorAll('[data-chat-unread]')){bubble.hidden=!count;bubble.textContent=count>9?'9+':String(count)}
+ for(const chat of card.querySelectorAll('.navo-chat'))chat.classList.toggle('has-unread',count>0);
+ let dot=card.querySelector('[data-unread-dot]');if(!dot){dot=document.createElement('span');dot.dataset.unreadDot='1';dot.style.cssText='display:inline-block;background:#f7c94a;color:#3a2b00;border-radius:30px;padding:5px 10px;margin:8px 0;font-weight:700';card.insertBefore(dot,card.firstChild)}dot.textContent='🟡 '+count+' новых сообщений';dot.hidden=!count;dot.style.display=count?'inline-block':'none'}
  const clientTab=$('tab-bookings');if(clientTab&&!masterView){const n=[...counts.values()].reduce((a,b)=>a+b,0);clientTab.textContent=n?'Мои записи 🟡 '+n:'Мои записи'}
 }
 function chatPanel(bookingId,viewerId,accessToken,active){
@@ -100,7 +106,14 @@ function chatPanel(bookingId,viewerId,accessToken,active){
  if(active)for(const phrase of ['Я в дороге','Опаздываю на 10 минут','Хорошо, жду','Буду через 5 минут']){const b=document.createElement('button');b.type='button';b.className='secondary';b.style.cssText='width:auto;padding:8px;font-size:13px';b.textContent=phrase;b.onclick=()=>{input.value=phrase;input.focus()};quick.append(b)}
  const refreshButton=document.createElement('button');refreshButton.type='button';refreshButton.className='secondary';refreshButton.textContent='Обновить сообщения';refreshButton.onclick=refresh;
  wrap.append(header,info,messages,status,quick,input,send,refreshButton);if(!active){input.hidden=true;send.hidden=true;quick.hidden=true;wrap.append(text('p','Запись закрыта. Переписка доступна только для чтения.'))}
- const details=document.createElement('details');details.dataset.chatBooking=bookingId;details.append(Object.assign(document.createElement('summary'),{textContent:'Открыть чат'}),wrap);details.addEventListener('toggle',()=>{if(details.open)refresh()});return details
+ const details=document.createElement('details');details.dataset.chatBooking=bookingId;details.className='navo-chat';
+ const summary=document.createElement('summary');summary.className='navo-chat-button';
+ const glyph=document.createElement('span');glyph.textContent='💬';glyph.className='navo-chat-glyph';
+ const title=document.createElement('span');title.textContent='Чат с '+(viewerId===api()?.getSession?.()?.user?.id?'клиентом':'мастером');title.className='navo-chat-title';
+ const dot=document.createElement('span');dot.className='navo-chat-dot';dot.dataset.chatUnread='1';dot.hidden=true;dot.textContent='1';
+ summary.append(glyph,title,dot);details.append(summary,wrap);
+ details.addEventListener('toggle',()=>{if(details.open){refresh();updateBookingUnread().catch(console.error)}});
+ return details
 }
 let clientRenderRunning=false,clientRenderQueued=false;
 window.navoChatPanel=chatPanel;
