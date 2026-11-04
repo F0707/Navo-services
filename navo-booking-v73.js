@@ -50,6 +50,28 @@ async function attachMasterCards(){
  try{const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100');const master=masters.find(x=>x.display_name===name);if(master)await openMaster(master)}catch(err){alert('Не удалось открыть мастера: '+err.message)}
  },true);
 }
+function chatPanel(bookingId,viewerId,accessToken,active){
+ const wrap=document.createElement('div');wrap.className='item';wrap.style.marginTop='14px';
+ const header=text('h3','💬 Сообщения по записи');const info=text('p','Переписка видна только клиенту и мастеру.');info.className='muted';
+ const messages=document.createElement('div');messages.style.cssText='max-height:260px;overflow-y:auto;padding:8px 0';
+ const status=text('p','');status.className='muted';
+ const input=document.createElement('textarea');input.rows=2;input.maxLength=500;input.placeholder='Напишите сообщение…';input.disabled=!active;
+ const send=button('Отправить сообщение',async()=>{const body=input.value.trim();if(!body)return;send.disabled=true;try{
+ const response=await fetch(api().ROOT+'/rest/v1/navo_booking_messages',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({booking_id:bookingId,sender_id:viewerId,body})});
+ if(!response.ok){const err=await response.json().catch(()=>({}));throw Error(err.message||'Не удалось отправить сообщение')}
+ input.value='';await refresh()
+ }catch(e){status.textContent='Ошибка: '+e.message}finally{send.disabled=false}});
+ const refresh=async()=>{try{const rows=await get('/rest/v1/navo_booking_messages?select=id,sender_id,body,created_at&booking_id=eq.'+bookingId+'&order=created_at.asc&limit=100',accessToken);
+ messages.replaceChildren();if(!rows.length)messages.append(text('p','Сообщений пока нет'));
+ for(const m of rows){const p=document.createElement('p');p.style.cssText='padding:8px 10px;border-radius:10px;margin:6px 0;background:'+(m.sender_id===viewerId?'#e4f1e8':'#f1f1f1')+';color:#193f34';p.textContent=(m.sender_id===viewerId?'Вы: ':'Собеседник: ')+m.body;messages.append(p)}
+ status.textContent='Сообщений: '+rows.length;
+ }catch(e){status.textContent='Ошибка загрузки переписки: '+e.message}};
+ const quick=document.createElement('div');quick.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
+ if(active)for(const phrase of ['Я в дороге','Опаздываю на 10 минут','Хорошо, жду','Буду через 5 минут']){const b=document.createElement('button');b.type='button';b.className='secondary';b.style.cssText='width:auto;padding:8px;font-size:13px';b.textContent=phrase;b.onclick=()=>{input.value=phrase;input.focus()};quick.append(b)}
+ const refreshButton=document.createElement('button');refreshButton.type='button';refreshButton.className='secondary';refreshButton.textContent='Обновить сообщения';refreshButton.onclick=refresh;
+ wrap.append(header,info,messages,status,quick,input,send,refreshButton);if(!active){input.hidden=true;send.hidden=true;quick.hidden=true;wrap.append(text('p','Запись закрыта. Переписка доступна только для чтения.'))}
+ const details=document.createElement('details');details.append(Object.assign(document.createElement('summary'),{textContent:'Открыть чат'}),wrap);details.addEventListener('toggle',()=>{if(details.open)refresh()});return details
+}
 async function clientCards(){
  const box=$('bookings-items');if(!box)return;
  const user=api().getAuth()?.user;if(!user)return;
@@ -64,7 +86,7 @@ async function clientCards(){
  if(master?.photo_url){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото мастера';photo.style.cssText='width:76px;height:76px;object-fit:cover;border-radius:12px';detail.append(photo)}
  detail.append(text('h3','Ваш мастер'),text('p',master?.display_name||'Мастер NAVO'),text('p','Адрес: '+([master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес не указан')),text('h3','Дата и время'),text('p',dateText(b.starts_at)),text('h3','Выбранные услуги'));
  const items=await get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id);
- detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Для этой старой записи список услуг не сохранён'),text('h3','Итого: '+b.total_somoni+' сомони'));
+ detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Для этой старой записи список услуг не сохранён'),text('h3','Итого: '+b.total_somoni+' сомони'));detail.append(chatPanel(b.id,user.id,token(),!['cancelled','completed'].includes(b.status)));
  if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code){const codeBox=document.createElement('div');codeBox.className='item';codeBox.style.textAlign='center';const caption=text('p','Код подтверждения обслуживания');const digits=text('h2',String(code).padStart(4,'0'));digits.style.cssText='font-size:34px;letter-spacing:8px;margin:8px 0';codeBox.append(caption,digits,text('p','После окончания обслуживания сообщите эти 4 цифры мастеру. Мастер введёт код, чтобы завершить запись.'));detail.append(codeBox)}}catch(e){}}
  if(['requested','confirmed'].includes(b.status)){
  const edit=button('Изменить дату и время',()=>{form.hidden=!form.hidden});const form=document.createElement('div');form.hidden=true;
@@ -91,10 +113,11 @@ async function masterCards(){
  const rows=await get('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(s.user.id)+'&order=starts_at.asc&limit=200',s.access_token);
  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const dateKey=x=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(x));
+ try{const summary=await get('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+s.user.id,s.access_token);const dash=$('ml-dashboard');if(dash){let rating=$('navo-master-rating');if(!rating){rating=document.createElement('p');rating.id='navo-master-rating';dash.insertBefore(rating,dash.firstChild)}rating.textContent=summary.length?'⭐ Рейтинг мастера: '+summary[0].average_stars+' / 5 · Оценок: '+summary[0].reviews_count:'⭐ Рейтинг мастера: пока нет оценок'}}catch(e){}
  for(const [kind,items] of [['today',rows.filter(x=>dateKey(x.starts_at)===today)],['upcoming',rows.filter(x=>new Date(x.starts_at).getTime()>=Date.now())]]){
  const box=$('md-'+kind+'-list');if(!box)continue;box.replaceChildren();
  for(const b of items){const card=document.createElement('div');card.className='item';card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
- const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));
+ const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));card.append(chatPanel(b.id,s.user.id,s.access_token,!['cancelled','completed'].includes(b.status)));
  if(['confirmed','requested'].includes(b.status)){
  const panel=document.createElement('div');panel.hidden=true;panel.className='item';
  panel.append(text('p','Попросите у клиента его четырёхзначный код после оказания услуги.'));
@@ -105,6 +128,7 @@ async function masterCards(){
  card.append(arrive,panel)
 }
  if(b.status==='completed')card.append(text('p','✓ Обслуживание завершено'));
+ try{const ratings=await get('/rest/v1/navo_reviews?select=stars&booking_id=eq.'+b.id,s.access_token);if(ratings.length)card.append(text('p','Оценка клиента: '+('★'.repeat(ratings[0].stars))+' ('+ratings[0].stars+'/5)'));else if(b.status==='completed')card.append(text('p','Ожидается оценка клиента'));}catch(e){}
  box.append(card)}
  }
 }
