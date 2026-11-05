@@ -30,7 +30,7 @@ async function openMaster(master){
  const box=$('catalog-items');box.replaceChildren();$('catalog')?.classList.add('navo-master-detail-open');box.append(button('← Назад',()=>api().catalog()));
  const profile=document.createElement('div');profile.className='navo-selected-master-profile';
  const avatar=document.createElement('div');avatar.className='navo-selected-master-avatar';
- if(master.photo_url&&/^https:\/\//i.test(master.photo_url)){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото профиля мастера '+(master.display_name||'NAVO');photo.loading='eager';photo.decoding='async';photo.onerror=()=>{photo.remove();avatar.textContent='✂'};avatar.append(photo)}else{avatar.textContent='✂'}
+ if(master.photo_url&&/^https:\/\//i.test(master.photo_url)){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото профиля мастера '+(master.display_name||'NAVO');photo.loading='eager';photo.decoding='async';photo.fetchPriority='high';photo.onerror=()=>{photo.remove();avatar.textContent='✂'};avatar.append(photo)}else{avatar.textContent='✂'}
  const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));profile.append(avatar,info);box.append(profile);
  const status=text('p','Загружаем услуги…');box.append(status);
  try{
