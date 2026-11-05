@@ -31,7 +31,22 @@ async function editor(box,token,uid,selected){
 async function clientMaster(master){
  const box=$('catalog-items');box.replaceChildren();
  const back=document.createElement('button');back.type='button';back.className='secondary';back.textContent='← К списку мастеров';back.onclick=()=>api().catalog();box.append(back);
- const h=document.createElement('h3');h.textContent=master.display_name||'Мастер NAVO';box.append(h);
+ const profile=document.createElement('section');profile.className='navo-client-master-profile';
+ const header=document.createElement('div');header.className='navo-client-master-header';
+ if(master.photo_url){const portrait=document.createElement('img');portrait.src=master.photo_url;portrait.alt='Фото мастера';portrait.className='navo-client-master-portrait';header.append(portrait)}
+ const identity=document.createElement('div');const name=document.createElement('h3');name.textContent=master.display_name||'Мастер NAVO';identity.append(name);
+ const address=document.createElement('p');address.textContent='📍 '+([master.city,master.work_address].filter(Boolean).join(', ')||'Адрес уточняется');identity.append(address);
+ if(master.experience_years!==null&&master.experience_years!==undefined){const years=document.createElement('p');years.textContent='🏅 Стаж работы: '+master.experience_years+' лет';identity.append(years)}
+ header.append(identity);profile.append(header);
+ const rating=document.createElement('p');rating.className='navo-client-master-rating';rating.textContent='⭐ Рейтинг: загружается…';profile.append(rating);
+ const works=document.createElement('div');works.className='navo-client-master-works';
+ const worksTitle=document.createElement('h4');worksTitle.textContent='✂ Выполненные работы';profile.append(worksTitle);
+ for(const url of (Array.isArray(master.portfolio_urls)?master.portfolio_urls:[])){const image=document.createElement('img');image.src=url;image.loading='lazy';image.alt='Причёска, выполненная мастером';works.append(image)}
+ if(!works.children.length){const empty=document.createElement('p');empty.textContent='Фотографии работ пока не добавлены';works.append(empty)}
+ profile.append(works);box.append(profile);
+ const tokenForRating=api().getAuth()?.access_token;
+ read('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+encodeURIComponent(master.master_id),tokenForRating).then(rows=>{rating.textContent=rows.length?'⭐ Рейтинг: '+rows[0].average_stars+' / 5 · '+rows[0].reviews_count+' оценок':'⭐ Пока нет оценок'}).catch(()=>{rating.textContent='⭐ Рейтинг пока недоступен'});
+
  const info=document.createElement('p');info.textContent=[master.city,master.work_address].filter(Boolean).join(', ');box.append(info);
  const message=document.createElement('p');message.className='muted';message.textContent='Загружаем услуги…';box.append(message);
  try{
