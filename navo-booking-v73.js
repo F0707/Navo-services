@@ -44,7 +44,7 @@ async function openMaster(master){
  }
  box.append(total,text('h3','Дата и время посещения'));
  const {date,time}=dateTimeControls();
- const note=text('p','Выберите дату и время из списка. Время указано по Душанбе. Мастер должен подтвердить доступность выбранного времени вне приложения, пока расписание не настроено.');
+ const note=text('p','Время указано по Душанбе. NAVO подтверждает запись автоматически, если мастер работает и выбранный интервал свободен.');
  const result=text('p','');const submit=button('Записаться к мастеру',async()=>{
  try{
  if(!chosen.size)throw Error('Сначала выберите услуги');
@@ -210,5 +210,22 @@ async function renderMasterCards(){
  }
  updateBookingUnread().catch(console.error)
 }
-document.addEventListener('DOMContentLoaded',()=>{setInterval(()=>updateBookingUnread().catch(console.error),15000);attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>setTimeout(()=>clientCards().catch(console.error),150));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>setTimeout(()=>masterCards().catch(console.error),200));window.addEventListener('navo-master-bookings-loaded',()=>masterCards().catch(console.error));});
+async function setupMasterSchedule(){
+ const panel=$('md-profile');const session=api().getSession();if(!panel||!session?.access_token)return;
+ let area=$('navo-schedule-panel');if(!area){
+ area=document.createElement('section');area.id='navo-schedule-panel';area.className='item';
+ const heading=text('h3','📅 Моё рабочее расписание');const explanation=text('p','NAVO автоматически подтверждает записи только в рабочее время. Пока длительность каждой услуги — 30 минут.');
+ const days=document.createElement('div');days.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px';
+ const checks=[];for(const [n,label] of [[1,'Понедельник'],[2,'Вторник'],[3,'Среда'],[4,'Четверг'],[5,'Пятница'],[6,'Суббота'],[7,'Воскресенье']]){const wrap=document.createElement('label');wrap.style.cssText='display:flex;align-items:center;gap:7px;font-weight:400;font-size:13px;margin:5px 0';const cb=document.createElement('input');cb.type='checkbox';cb.value=n;cb.style.width='auto';wrap.append(cb,document.createTextNode(label));days.append(wrap);checks.push(cb)}
+ const start=document.createElement('select'),end=document.createElement('select');for(let h=0;h<24;h++)for(const m of ['00','30']){const v=String(h).padStart(2,'0')+':'+m;for(const el of [start,end]){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.append(opt)}}
+ start.className='navo-time-select';end.className='navo-time-select';
+ const feedback=text('p','');const save=button('Сохранить расписание',async()=>{try{const working_days=checks.filter(x=>x.checked).map(x=>Number(x.value));if(!working_days.length)throw Error('Выберите рабочие дни');if(start.value>=end.value)throw Error('Время окончания должно быть позже начала');save.disabled=true;await fetch(api().ROOT+'/rest/v1/navo_master_schedules?on_conflict=master_id',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:JSON.stringify({master_id:session.user.id,start_time:start.value,end_time:end.value,working_days})}).then(async r=>{if(!r.ok)throw Error((await r.json()).message||'Ошибка сохранения')});feedback.textContent='✓ Расписание сохранено. Запись клиентов будет автоматической.'}catch(e){feedback.textContent='Ошибка: '+e.message}finally{save.disabled=false}});
+ area.append(heading,explanation,text('p','Рабочие дни'),days,text('p','Начало работы'),start,text('p','Конец работы'),end,save,feedback);
+ panel.prepend(area);area._scheduleFields={checks,start,end};
+ }
+ const rows=await get('/rest/v1/navo_master_schedules?select=*&master_id=eq.'+session.user.id,session.access_token);
+ const data=rows[0]||{working_days:[1,2,3,4,5,6,7],start_time:'09:00',end_time:'20:00'};
+ const {checks,start,end}=area._scheduleFields;for(const cb of checks)cb.checked=data.working_days.includes(Number(cb.value));start.value=data.start_time.slice(0,5);end.value=data.end_time.slice(0,5);
+}
+document.addEventListener('DOMContentLoaded',()=>{setInterval(()=>updateBookingUnread().catch(console.error),15000);attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>setTimeout(()=>clientCards().catch(console.error),150));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>{setTimeout(()=>masterCards().catch(console.error),200);setupMasterSchedule().catch(console.error)});window.addEventListener('navo-master-bookings-loaded',()=>{masterCards().catch(console.error);setupMasterSchedule().catch(console.error)});});
 })();
