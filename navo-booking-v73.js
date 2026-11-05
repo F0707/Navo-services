@@ -201,8 +201,14 @@ async function renderMasterCards(){
  try{const summary=await get('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+s.user.id,s.access_token);const dash=$('ml-dashboard');if(dash){let rating=$('navo-master-rating');if(!rating){rating=document.createElement('p');rating.id='navo-master-rating';dash.insertBefore(rating,dash.firstChild)}rating.textContent=summary.length?'⭐ Рейтинг мастера: '+summary[0].average_stars+' / 5 · Оценок: '+summary[0].reviews_count:'⭐ Рейтинг мастера: пока нет оценок'}}catch(e){}
  for(const [kind,items] of [['today',rows.filter(x=>dateKey(x.starts_at)===today)],['upcoming',rows.filter(x=>new Date(x.starts_at).getTime()>=Date.now())]]){
  const box=$('md-'+kind+'-list');if(!box)continue;box.replaceChildren();
- for(const b of items){const card=document.createElement('div');card.className='item navo-booking-tile';card.dataset.bookingCard=b.id;card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
- const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));card.append(chatPanel(b.id,s.user.id,s.access_token,!['cancelled','completed'].includes(b.status)));
+ for(const b of items){const card=document.createElement('div');card.className='item navo-booking-tile';card.dataset.bookingCard=b.id;const shortStatus={confirmed:'Подтверждена',requested:'Ожидает',completed:'Завершена',cancelled:'Отменена'}[b.status]||b.status;
+ const summary=document.createElement('div');summary.className='navo-booking-summary';
+ summary.append(text('strong','🕒 '+dateText(b.starts_at)),text('span','👤 '+(b.client_phone||'Клиент без номера')),text('span',shortStatus+' · '+b.total_somoni+' сом.'));
+ const details=document.createElement('div');details.className='navo-master-booking-details';details.hidden=true;
+ const open=button('Открыть клиента',()=>{const opening=details.hidden;for(const tile of box.querySelectorAll('.navo-booking-tile')){tile.hidden=opening&&tile!==card;const d=tile.querySelector('.navo-master-booking-details');if(d)d.hidden=true}details.hidden=!opening;open.textContent=opening?'← К списку клиентов':'Открыть клиента';if(!opening){for(const tile of box.querySelectorAll('.navo-booking-tile'))tile.hidden=false;open.textContent='Открыть клиента'}});
+ open.className='secondary navo-booking-open';
+ card.append(summary,open,details);
+ const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);details.append(text('p','Услуги: '+serviceRows.map(x=>x.service_name).join(', ')));details.append(chatPanel(b.id,s.user.id,s.access_token,!['cancelled','completed'].includes(b.status)));
  if(['confirmed','requested'].includes(b.status)){
  const panel=document.createElement('div');panel.hidden=true;panel.className='item';
  panel.append(text('p','Попросите у клиента его четырёхзначный код после оказания услуги.'));
@@ -210,10 +216,10 @@ async function renderMasterCards(){
  const result=text('p','');const confirm=button('Подтвердить обслуживание',async()=>{try{if(!/^[0-9]{4}$/.test(code.value))throw Error('Введите 4 цифры из кабинета клиента');confirm.disabled=true;const ok=await rpc('navo_complete_booking',{p_booking:b.id,p_code:code.value},s.access_token);if(!ok)throw Error('Неверный код. Проверьте четыре цифры.');await masterCards()}catch(e){result.textContent=e.message;confirm.disabled=false}});
  panel.append(code,confirm,result);
  const arrive=button('Клиент пришёл',()=>{panel.hidden=!panel.hidden;arrive.textContent=panel.hidden?'Клиент пришёл':'Скрыть ввод кода';if(!panel.hidden)code.focus()});
- card.append(arrive,panel)
+ details.append(arrive,panel)
 }
- if(b.status==='completed')card.append(text('p','✓ Обслуживание завершено'));
- try{const ratings=await get('/rest/v1/navo_reviews?select=stars&booking_id=eq.'+b.id,s.access_token);if(ratings.length)card.append(text('p','Оценка клиента: '+('★'.repeat(ratings[0].stars))+' ('+ratings[0].stars+'/5)'));else if(b.status==='completed')card.append(text('p','Ожидается оценка клиента'));}catch(e){}
+ if(b.status==='completed')details.append(text('p','✓ Обслуживание завершено'));
+ try{const ratings=await get('/rest/v1/navo_reviews?select=stars&booking_id=eq.'+b.id,s.access_token);if(ratings.length)details.append(text('p','Оценка клиента: '+('★'.repeat(ratings[0].stars))+' ('+ratings[0].stars+'/5)'));else if(b.status==='completed')details.append(text('p','Ожидается оценка клиента'));}catch(e){}
  box.append(card)}
  }
  updateBookingUnread().catch(console.error)
