@@ -27,7 +27,11 @@ function dateTimeControls(initialDate,initialTime){
 }
 const mobileDateCss=document.createElement('style');mobileDateCss.textContent='.navo-date-select,.navo-time-select{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;border:1px solid #9eafa5;border-radius:12px;background:#fff;color:#173f35;font:inherit;font-size:16px;padding:13px;margin:10px 0 15px;appearance:auto}';document.head.append(mobileDateCss);
 async function openMaster(master){
- const box=$('catalog-items');box.replaceChildren();$('catalog')?.classList.add('navo-master-detail-open');box.append(button('← Назад',()=>api().catalog()),text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));
+ const box=$('catalog-items');box.replaceChildren();$('catalog')?.classList.add('navo-master-detail-open');box.append(button('← Назад',()=>api().catalog()));
+ const profile=document.createElement('div');profile.className='navo-selected-master-profile';
+ const avatar=document.createElement('div');avatar.className='navo-selected-master-avatar';
+ if(master.photo_url&&/^https:\/\//i.test(master.photo_url)){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото профиля мастера '+(master.display_name||'NAVO');photo.loading='eager';photo.decoding='async';photo.onerror=()=>{photo.remove();avatar.textContent='✂'};avatar.append(photo)}else{avatar.textContent='✂'}
+ const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));profile.append(avatar,info);box.append(profile);
  const status=text('p','Загружаем услуги…');box.append(status);
  try{
  const rows=await get('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc');
