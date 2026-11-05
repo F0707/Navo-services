@@ -280,20 +280,7 @@ async function catalog(){
  const address=document.createElement('p');address.textContent='📍 '+([row.city,row.work_address].filter(Boolean).join(', ')||'Адрес уточняется');content.append(address);
  if(Array.isArray(row.services)){const count=document.createElement('p');count.className='muted';count.textContent='Услуг: '+row.services.length;content.append(count)}
  head.append(content);card.append(head);
- const showcase=document.createElement('div');showcase.className='navo-master-showcase';showcase.hidden=true;
- const heading=document.createElement('h3');heading.textContent='✂ Портфолио мастера';showcase.append(heading);
- const facts=document.createElement('div');facts.className='navo-master-facts';
- if(row.experience_years!==null&&row.experience_years!==undefined){const x=document.createElement('span');x.textContent='🏅 Стаж: '+row.experience_years+' лет';facts.append(x)}
- const rating=document.createElement('span');rating.textContent='⭐ Рейтинг: загрузка…';facts.append(rating);showcase.append(facts);
- const gallery=document.createElement('div');gallery.className='navo-portfolio-grid';
- for(const url of (Array.isArray(row.portfolio_urls)?row.portfolio_urls:[])){const img=document.createElement('img');img.src=url;img.loading='lazy';img.alt='Причёска из портфолио';gallery.append(img)}
- if(!gallery.children.length){const empty=document.createElement('p');empty.textContent='Мастер ещё не добавил фотографии работ';showcase.append(empty)}
- else showcase.append(gallery);
- card.append(showcase);
- const reveal=document.createElement('button');reveal.type='button';reveal.className='secondary full';reveal.textContent='👤 О мастере и его работах';reveal.onclick=event=>{event.stopPropagation();showcase.hidden=!showcase.hidden;reveal.textContent=showcase.hidden?'👤 О мастере и его работах':'Скрыть портфолио'};card.append(reveal);
- request('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+encodeURIComponent(row.master_id),null,auth.access_token,'GET').then(result=>{rating.textContent=result.length?'⭐ '+result[0].average_stars+' / 5 ('+result[0].reviews_count+')':'⭐ Пока нет оценок'}).catch(()=>{rating.textContent='⭐ Рейтинг пока недоступен'});
-
- const action=document.createElement('div');action.className='navo-master-action';action.textContent='Посмотреть услуги и цены  ›';card.append(action);
+ const action=document.createElement('div');action.className='navo-master-action';action.textContent='Открыть профиль мастера  ›';card.append(action);
  card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();card.click()}});
  box.append(card)
  }
@@ -496,4 +483,4 @@ window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,ge
 el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=110" defer></script><script src="./navo-booking-v73.js?v=107" defer></script><script src="./navo-inbox-v78.js?v=91" defer></script></body></html>
+</script><script src="./navo-prices-v72.js?v=111" defer></script><script src="./navo-booking-v73.js?v=107" defer></script><script src="./navo-inbox-v78.js?v=91" defer></script></body></html>
