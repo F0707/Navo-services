@@ -117,11 +117,11 @@ async function updateBookingUnread(){
  const clientTab=$('tab-bookings');if(clientTab&&!masterView){const n=[...counts.values()].reduce((a,b)=>a+b,0);clientTab.textContent=n?'Мои записи 🟡 '+n:'Мои записи'}
 }
 function chatPanel(bookingId,viewerId,accessToken,active){
- const wrap=document.createElement('div');wrap.className='item';wrap.style.marginTop='14px';wrap.style.background='transparent';
+ const wrap=document.createElement('div');wrap.className='item navo-chat-content';wrap.style.marginTop='10px';wrap.style.background='transparent';
  const header=text('h3','💬 Сообщения по записи');const info=text('p','Переписка видна только клиенту и мастеру.');info.className='muted';
  const messages=document.createElement('div');messages.style.cssText='max-height:260px;overflow-y:auto;padding:8px 0';
  const status=text('p','');status.className='muted';
- const input=document.createElement('textarea');input.rows=2;input.maxLength=500;input.placeholder='Напишите сообщение…';input.disabled=!active;
+ const input=document.createElement('textarea');input.className='navo-chat-input';input.rows=3;input.maxLength=500;input.placeholder='Напишите сообщение…';input.disabled=!active;
  const send=button('Отправить сообщение',async()=>{const body=input.value.trim();if(!body)return;send.disabled=true;try{
  const response=await fetch(api().ROOT+'/rest/v1/navo_booking_messages',{method:'POST',headers:{apikey:api().KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({booking_id:bookingId,sender_id:viewerId,body})});
  if(!response.ok){const err=await response.json().catch(()=>({}));throw Error(err.message||'Не удалось отправить сообщение')}
@@ -174,7 +174,7 @@ async function renderClientCards(){
  if(master?.photo_url){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото мастера';photo.style.cssText='width:48px;height:48px;object-fit:cover;border-radius:10px;float:right;margin:0 0 6px 8px';detail.append(photo)}
  const info=document.createElement('div');info.className='navo-client-info-grid';info.append(text('p','📍 '+([master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес не указан')),text('p','🕒 '+dateText(b.starts_at)));detail.append(info,text('h4','Услуги и стоимость'));
  const items=await get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id);
- detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Список услуг не сохранён'),text('p','Итого: '+b.total_somoni+' сомони'));detail.append(navoCompactSection('💬 Переписка с мастером',chatPanel(b.id,user.id,token(),!['cancelled','completed'].includes(b.status))));
+ detail.append(text('p',items.length?items.map(x=>x.service_name+' — '+x.price_somoni+' сом.').join('; '):'Список услуг не сохранён'),text('p','Итого: '+b.total_somoni+' сомони'));detail.append(chatPanel(b.id,user.id,token(),b.status!=='cancelled'));
  if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code){const codeBox=document.createElement('div');codeBox.className='item';codeBox.style.textAlign='center';const caption=text('p','Код подтверждения обслуживания');const digits=text('h2',String(code).padStart(4,'0'));digits.style.cssText='font-size:34px;letter-spacing:8px;margin:8px 0';codeBox.append(caption,digits,text('p','После окончания обслуживания сообщите эти 4 цифры мастеру. Мастер введёт код, чтобы завершить запись.'));detail.append(navoCompactSection('🔑 Код завершения услуги',codeBox))}}catch(e){}}
  if(['requested','confirmed'].includes(b.status)){
  const edit=button('Изменить дату и время',()=>{form.hidden=!form.hidden});const form=document.createElement('div');form.hidden=true;
@@ -220,7 +220,7 @@ async function renderMasterCards(){
  const open=button('Открыть клиента',()=>{const opening=details.hidden;box.classList.toggle('navo-focused-booking',opening);for(const tile of box.querySelectorAll('.navo-booking-tile')){tile.hidden=opening&&tile!==card;tile.classList.toggle('navo-active-booking',opening&&tile===card);const d=tile.querySelector('.navo-master-booking-details');if(d)d.hidden=true;const btn=tile.querySelector('.navo-booking-open');if(btn)btn.textContent='Открыть клиента'}details.hidden=!opening;open.textContent=opening?'← К списку клиентов':'Открыть клиента';if(!opening){for(const tile of box.querySelectorAll('.navo-booking-tile'))tile.hidden=false}});
  open.className='secondary navo-booking-open';
  card.append(summary,open,details);
- const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);details.append(text('p','Услуги: '+serviceRows.map(x=>x.service_name).join(', ')));details.append(navoCompactSection('💬 Чат с клиентом',chatPanel(b.id,s.user.id,s.access_token,!['cancelled','completed'].includes(b.status))));
+ const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);details.append(text('p','Услуги: '+serviceRows.map(x=>x.service_name).join(', ')));details.append(chatPanel(b.id,s.user.id,s.access_token,b.status!=='cancelled'));
  if(['confirmed','requested'].includes(b.status)){
  const panel=document.createElement('div');panel.hidden=true;panel.className='item';
  panel.append(text('p','Попросите у клиента его четырёхзначный код после оказания услуги.'));
