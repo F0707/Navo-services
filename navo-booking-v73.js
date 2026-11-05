@@ -155,7 +155,7 @@ async function renderClientCards(){
  box.replaceChildren();if(!rows.length){box.append(text('p','У вас пока нет записей'));return}
  const masters=await get('/rest/v1/navo_test_master_catalog?select=master_id,display_name,city,work_address,photo_url&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
  for(const b of rows){
- const card=document.createElement('div');card.className='item';card.dataset.bookingCard=b.id;
+ const card=document.createElement('div');card.className='item navo-booking-tile';card.dataset.bookingCard=b.id;
  const master=masterMap.get(b.master_id);const title=text('strong',master?.display_name?'Мастер: '+master.display_name:'Мастер NAVO');const status=text('p','Статус: '+({completed:'Обслуживание завершено',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status)+' · '+b.total_somoni+' сомони');
  const detail=document.createElement('div');detail.hidden=true;card.append(title,text('p',dateText(b.starts_at)),status);
  const toggle=button('Открыть запись',()=>{detail.hidden=!detail.hidden;toggle.textContent=detail.hidden?'Открыть запись':'Свернуть запись'});card.append(toggle,detail);
@@ -201,7 +201,7 @@ async function renderMasterCards(){
  try{const summary=await get('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+s.user.id,s.access_token);const dash=$('ml-dashboard');if(dash){let rating=$('navo-master-rating');if(!rating){rating=document.createElement('p');rating.id='navo-master-rating';dash.insertBefore(rating,dash.firstChild)}rating.textContent=summary.length?'⭐ Рейтинг мастера: '+summary[0].average_stars+' / 5 · Оценок: '+summary[0].reviews_count:'⭐ Рейтинг мастера: пока нет оценок'}}catch(e){}
  for(const [kind,items] of [['today',rows.filter(x=>dateKey(x.starts_at)===today)],['upcoming',rows.filter(x=>new Date(x.starts_at).getTime()>=Date.now())]]){
  const box=$('md-'+kind+'-list');if(!box)continue;box.replaceChildren();
- for(const b of items){const card=document.createElement('div');card.className='item';card.dataset.bookingCard=b.id;card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
+ for(const b of items){const card=document.createElement('div');card.className='item navo-booking-tile';card.dataset.bookingCard=b.id;card.append(text('strong',dateText(b.starts_at)),text('p','Клиент: '+(b.client_phone||'номер не указан')+' · '+b.total_somoni+' сомони · '+b.status));
  const serviceRows=await get('/rest/v1/navo_booking_items?select=service_name&booking_id=eq.'+b.id,s.access_token);card.append(text('p',serviceRows.map(x=>x.service_name).join(', ')));card.append(chatPanel(b.id,s.user.id,s.access_token,!['cancelled','completed'].includes(b.status)));
  if(['confirmed','requested'].includes(b.status)){
  const panel=document.createElement('div');panel.hidden=true;panel.className='item';
