@@ -31,7 +31,7 @@ async function openMaster(master){
  const profile=document.createElement('div');profile.className='navo-selected-master-profile';
  const avatar=document.createElement('div');avatar.className='navo-selected-master-avatar';
  if(master.photo_url&&/^https:\/\//i.test(master.photo_url)){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото профиля мастера '+(master.display_name||'NAVO');photo.loading='eager';photo.decoding='async';photo.fetchPriority='high';photo.onerror=()=>{photo.remove();avatar.textContent='✂'};avatar.append(photo)}else{avatar.textContent='✂'}
- const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));profile.append(avatar,info);box.append(profile);
+ const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));const rating=master.navoRating;const stars=text('div',rating&&Number(rating.reviews_count)>0?'★'.repeat(Math.max(0,Math.min(5,Math.round(Number(rating.average_stars)))))+'☆'.repeat(5-Math.max(0,Math.min(5,Math.round(Number(rating.average_stars)))))+'  '+Number(rating.average_stars).toFixed(1)+' / 5 · '+rating.reviews_count+' оценок':'☆☆☆☆☆  Пока нет оценок');stars.className='navo-selected-master-rating';info.append(stars);profile.append(avatar,info);box.append(profile);
  const address=[master.city,master.work_address].filter(Boolean).join(', ');
  if(address){
   const location=document.createElement('section');location.className='navo-master-location';
