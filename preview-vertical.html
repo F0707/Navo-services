@@ -1,0 +1,519 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Cache-Control" content="no-cache"><title>NAVO Services — клиент</title><style>:root{font-family:system-ui,-apple-system,Arial;color:#173f35;background:#f4f7f1}*{box-sizing:border-box}body{margin:0}header{background:#fff;padding:18px 16px;border-bottom:1px solid #dce7dd;display:flex;align-items:center;justify-content:space-between;gap:12px}.logo{font-size:30px;font-weight:850;letter-spacing:-2px}.logo span{color:#8db66b}main{max-width:750px;margin:auto;padding:18px 16px 70px}.card{background:white;border:1px solid #d8e5d9;border-radius:18px;padding:22px;margin:15px 0;box-shadow:0 2px 10px #102a1610}h1{font-size:25px;margin:4px 0 12px}h2{font-size:21px}p{line-height:1.55}label{display:block;font-weight:650;margin:16px 0 7px}input{width:100%;font-size:18px;padding:15px;border:1px solid #9eafa5;border-radius:12px;background:#fff;color:#173f35}button{border:0;border-radius:13px;padding:15px;font-size:16px;font-weight:750;cursor:pointer}button.primary{background:#173f35;color:white}button.secondary{background:#e7f0e5;color:#173f35;border:1px solid #c5d6c6}button:disabled{opacity:.6}button.full{width:100%;margin-top:13px}.tabs{display:flex;gap:10px;margin:15px 0}.tabs button{flex:1;font-size:14px}.muted{color:#6b7c70;font-size:14px}.status{white-space:pre-wrap;min-height:20px}.hide{display:none!important}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.item{border-top:1px solid #e2e9e1;padding:14px 0}.phone{font-weight:700;overflow-wrap:anywhere}.master-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.master-actions button{min-height:64px}.password-wrap{position:relative}.password-wrap input{padding-right:65px}.password-eye{position:absolute;right:5px;top:5px;padding:9px 10px;background:transparent;color:#173f35;border-radius:9px;font-size:22px;min-width:48px}@media(max-width:380px){.master-actions{grid-template-columns:1fr}}.navo-master-card{border:1px solid #d6e3da;border-radius:22px;padding:18px;margin:14px 0;background:#fff;box-shadow:0 4px 14px rgba(19,65,49,.07);cursor:pointer;transition:transform .15s,box-shadow .15s}.navo-master-card:focus-visible{outline:3px solid #e8b62c}.navo-master-card:active{transform:scale(.99)}.navo-master-head{display:flex;gap:15px;align-items:center}.navo-master-avatar{width:86px;height:86px;object-fit:cover;border-radius:16px;flex-shrink:0}.navo-master-placeholder{display:grid;place-items:center;background:#e4f0e7;font-size:34px}.navo-master-info{min-width:0;flex:1}.navo-master-info strong{font-size:1.15rem;color:#174537}.navo-master-info p{margin:7px 0 0;overflow-wrap:anywhere}.navo-master-action{margin-top:16px;border-radius:13px;padding:12px 14px;text-align:center;background:#194b3c;color:white;font-weight:700}@media(max-width:420px){.navo-master-avatar{width:70px;height:70px}.navo-master-card{padding:14px}}
+.navo-master-card{padding:9px 11px;margin:7px 0;border-radius:14px;box-shadow:0 2px 7px rgba(19,65,49,.06)}.navo-master-head{gap:10px}.navo-master-avatar{width:48px;height:48px;border-radius:10px}.navo-master-placeholder{font-size:22px}.navo-master-info strong{font-size:15px}.navo-master-info p{font-size:12px;line-height:1.3;margin:3px 0 0}.navo-master-action{margin-top:8px;padding:7px 10px;border-radius:9px;font-size:12px}@media(max-width:420px){.navo-master-avatar{width:46px;height:46px}.navo-master-card{padding:9px 10px}}
+/* NAVO V93 compact catalog and booking lists */
+#catalog-items .navo-master-card{padding:7px 9px!important;margin:5px 0!important;border-radius:11px!important}
+#catalog-items .navo-master-head{gap:8px!important}
+#catalog-items .navo-master-avatar{width:38px!important;height:38px!important;border-radius:9px!important}
+#catalog-items .navo-master-info strong{font-size:13px!important;line-height:1.2}
+#catalog-items .navo-master-info p{font-size:11px!important;margin:2px 0 0!important;line-height:1.2}
+#catalog-items .navo-master-action{padding:5px 8px!important;margin-top:5px!important;font-size:11px!important;border-radius:8px!important}
+#bookings-items>.item,#md-today-list>.item,#md-upcoming-list>.item{padding:9px 10px!important;margin:7px 0!important;border:1px solid #dce7dd;border-radius:12px;background:#fff;overflow-wrap:anywhere}
+#bookings-items>.item>p,#md-today-list>.item>p,#md-upcoming-list>.item>p{font-size:12px;line-height:1.35;margin:5px 0}
+#bookings-items>.item>strong,#md-today-list>.item>strong,#md-upcoming-list>.item>strong{font-size:14px}
+#bookings-items>.item>button,#md-today-list>.item>button,#md-upcoming-list>.item>button{font-size:13px;padding:9px 12px;margin-top:6px}
+#md-today-list .navo-chat-trigger,#md-upcoming-list .navo-chat-trigger{min-height:0}
+#bookings-items .item h3,#md-today-list .item h3,#md-upcoming-list .item h3{font-size:15px;margin:10px 0 6px}
+#bookings-items .item .item,#md-today-list .item .item,#md-upcoming-list .item .item{padding:8px 0}
+@media(max-width:420px){#bookings,#catalog,#ml-dashboard{min-width:0}#bookings-items,#catalog-items,#md-today-list,#md-upcoming-list{min-width:0;max-width:100%}}
+/* V94: clear boundaries and compact independent booking cards */
+#md-today-list>.navo-booking-tile,#md-upcoming-list>.navo-booking-tile,#bookings-items>.navo-booking-tile{
+ display:block!important;position:relative;isolation:isolate;clear:both;
+ margin:12px 0!important;padding:12px!important;
+ border:2px solid #9dbbab!important;border-left:5px solid #1c5b49!important;
+ border-radius:16px!important;background:#f9fcfa!important;
+ box-shadow:0 3px 12px rgba(17,65,47,.09)!important;
+ max-width:100%;min-width:0;overflow:hidden;
+}
+#md-today-list>.navo-booking-tile:nth-child(even),#md-upcoming-list>.navo-booking-tile:nth-child(even),#bookings-items>.navo-booking-tile:nth-child(even){background:#f0f6f0!important}
+.navo-booking-tile>strong{display:block;font-size:15px!important;color:#174638;border-bottom:1px solid #d7e6da;padding-bottom:7px}
+.navo-booking-tile>p{font-size:12px!important;line-height:1.35!important;margin:6px 0!important}
+.navo-booking-tile>button{font-size:13px!important;padding:9px 11px!important;min-height:0!important}
+.navo-booking-tile .item{border-top:1px solid #dce7df;padding:8px 0}
+.navo-booking-tile .navo-chat-trigger,.navo-booking-tile button.full{padding:10px 12px!important;font-size:13px!important;margin-top:8px!important}
+.navo-booking-tile img{max-width:56px;max-height:56px}
+#md-today-list,#md-upcoming-list,#bookings-items{display:block;min-width:0;width:100%;max-width:100%}
+/* NAVO V95: one-client focus in master's booking list */
+#md-today-list>.navo-booking-tile,#md-upcoming-list>.navo-booking-tile{padding:7px 9px!important;margin:6px 0!important;border:1px solid #bfd4c5!important;border-left:4px solid #1c5b49!important;border-radius:12px!important;box-shadow:0 2px 5px rgba(17,65,47,.06)!important}
+.navo-booking-summary{display:flex;flex-direction:column;gap:3px;min-width:0}
+.navo-booking-summary strong{font-size:13px!important;border:0!important;padding:0!important}
+.navo-booking-summary span{font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+.navo-booking-open{display:block;width:100%;padding:7px 9px!important;font-size:12px!important;margin-top:6px!important;border-radius:8px!important}
+.navo-master-booking-details{margin-top:9px;padding-top:9px;border-top:1px solid #d4e2d6}
+.navo-master-booking-details[hidden],.navo-booking-tile[hidden]{display:none!important}
+.navo-master-booking-details p{font-size:13px;line-height:1.4;margin:7px 0}
+/* NAVO V96: high contrast booking cards and gentle action button */
+#md-today-list>.navo-booking-tile,#md-upcoming-list>.navo-booking-tile{
+ border:2px solid #3f8c83!important;
+ border-left:6px solid #176c66!important;
+ border-radius:15px!important;
+ background:#f4faf8!important;
+ box-shadow:0 3px 11px rgba(17,76,71,.16)!important;
+ margin:12px 0!important;
+ padding:10px 12px!important;
+}
+#md-today-list>.navo-booking-tile:nth-child(even),#md-upcoming-list>.navo-booking-tile:nth-child(even){background:#e9f5f1!important}
+#md-today-list .navo-booking-open,#md-upcoming-list .navo-booking-open{
+ background:#d4e9fa!important;color:#17466a!important;
+ border:1.5px solid #81b6da!important;border-radius:10px!important;
+ box-shadow:none!important;font-weight:700!important;
+ padding:9px 12px!important;font-size:13px!important;
+}
+#md-today-list .navo-booking-open:active,#md-upcoming-list .navo-booking-open:active{background:#b8dcf4!important}
+/* NAVO V97: client cards match master cards */
+#bookings-items>.navo-booking-tile{
+ display:block!important;position:relative;clear:both;
+ border:2px solid #3f8c83!important;border-left:6px solid #176c66!important;
+ border-radius:15px!important;background:#f4faf8!important;
+ box-shadow:0 3px 11px rgba(17,76,71,.16)!important;
+ margin:12px 0!important;padding:10px 12px!important;
+ min-width:0;max-width:100%;overflow:hidden;
+}
+#bookings-items>.navo-booking-tile:nth-child(even){background:#e9f5f1!important}
+#bookings-items>.navo-booking-tile>strong{display:block;font-size:13px!important;border:0!important;padding:0!important}
+#bookings-items>.navo-booking-tile>p{font-size:11px!important;line-height:1.3!important;margin:4px 0!important}
+#bookings-items .navo-client-booking-open{
+ display:block;width:100%;background:#d4e9fa!important;color:#17466a!important;
+ border:1.5px solid #81b6da!important;border-radius:10px!important;
+ box-shadow:none!important;font-weight:700!important;
+ padding:9px 12px!important;font-size:13px!important;margin-top:7px!important;
+}
+#bookings-items .navo-client-booking-open:active{background:#b8dcf4!important}
+#bookings-items .navo-client-booking-details{margin-top:9px;padding-top:9px;border-top:1px solid #d4e2d6}
+#bookings-items .navo-client-booking-details[hidden],#bookings-items .navo-booking-tile[hidden]{display:none!important}
+/* V98: tidy, restrained mobile booking details */
+#bookings-items>.navo-booking-tile{padding:10px 12px!important;margin:10px 0!important;border:1.5px solid #57978b!important;border-left:4px solid #257367!important;border-radius:13px!important;box-shadow:0 2px 7px rgba(24,75,65,.09)!important;background:#fff!important}
+#bookings-items>.navo-booking-tile:nth-child(even){background:#f6faf8!important}
+#bookings-items .navo-client-booking-details{padding-top:9px;margin-top:9px;border-top:1px solid #d9e5df}
+#bookings-items .navo-client-booking-details h3{font-size:15px!important;margin:13px 0 5px!important}
+#bookings-items .navo-client-booking-details h4{font-size:14px!important;margin:10px 0 5px!important;color:#194d42}
+#bookings-items .navo-client-booking-details p{font-size:13px!important;line-height:1.4!important;margin:5px 0!important;overflow-wrap:anywhere}
+#bookings-items .navo-client-info-grid{display:grid;gap:2px;padding:7px 0}
+#bookings-items .navo-client-booking-details>.item{padding:10px!important;margin:9px 0!important;border-radius:11px!important}
+#bookings-items .navo-client-booking-details button{max-width:100%;font-size:13px!important;padding:10px!important;margin:7px 0!important}
+#bookings-items .navo-client-booking-details img{max-width:48px!important;max-height:48px!important}
+#bookings-items .navo-client-booking-open{background:#e3f0f9!important;color:#194c69!important;border-color:#a4c8de!important}
+#bookings-status{font-size:12px;color:#60746d}
+/* V98: calmer and clearer booking experience */
+#bookings-items>.navo-booking-tile{background:#fff!important;border:1px solid #b7d0c5!important;border-left:4px solid #27725c!important;box-shadow:0 2px 6px rgba(22,70,55,.08)!important;padding:12px!important;margin:10px 0!important;border-radius:13px!important}
+#bookings-items>.navo-booking-tile:nth-child(even){background:#f7faf8!important}
+#bookings-items>.navo-booking-tile>strong{font-size:16px!important;line-height:1.3!important;color:#173e33!important;margin-bottom:7px}
+#bookings-items>.navo-booking-tile>p{font-size:13px!important;line-height:1.5!important;margin:4px 0!important}
+#bookings-items .navo-client-booking-open{background:#e2eff7!important;color:#205474!important;border:1px solid #a5cadf!important;font-size:13px!important;padding:9px 12px!important}
+#bookings-items .navo-client-booking-details{padding-top:10px!important}
+#bookings-items .navo-client-booking-details>h3{font-size:14px!important;color:#174a3d!important;margin:15px 0 5px!important}
+#bookings-items .navo-client-booking-details>p{font-size:13px!important;line-height:1.5!important;margin:5px 0!important}
+#bookings-items .navo-client-booking-details>.item{padding:10px!important;border-radius:11px!important}
+#bookings-items .navo-client-booking-details button{max-width:100%;font-size:13px!important;white-space:normal!important;overflow-wrap:anywhere}
+/* NAVO V99: consistent compact and scannable booking detail cards */
+#bookings-items>.navo-booking-tile,#md-today-list>.navo-booking-tile,#md-upcoming-list>.navo-booking-tile{
+ border:2px solid #4b9587!important;border-left:5px solid #1a7162!important;
+ border-radius:14px!important;padding:10px 12px!important;margin:10px 0!important;
+ background:#fff!important;box-shadow:0 2px 9px rgba(14,72,59,.12)!important;
+}
+#bookings-items>.navo-booking-tile:nth-child(even),#md-today-list>.navo-booking-tile:nth-child(even),#md-upcoming-list>.navo-booking-tile:nth-child(even){background:#f4faf7!important}
+.navo-compact-section{border:1px solid #cadfd6;border-radius:11px;margin:8px 0;background:#fff;overflow:hidden;max-width:100%}
+.navo-compact-section>summary{display:list-item;cursor:pointer;padding:10px 12px;font-weight:700;color:#1b5144;background:#edf5f0;font-size:13px;list-style-position:inside}
+.navo-compact-section[open]>summary{border-bottom:1px solid #cadfd6}
+.navo-compact-section>:not(summary){margin:8px!important;max-width:calc(100% - 16px);box-sizing:border-box}
+.navo-compact-section button{font-size:13px!important;max-width:100%;white-space:normal}
+.navo-master-booking-details,.navo-client-booking-details{font-size:13px;line-height:1.4}
+.navo-master-booking-details>p,.navo-client-booking-details>p{margin:6px 0!important}
+.navo-client-info-grid{display:grid;grid-template-columns:1fr;gap:2px}
+.navo-client-info-grid p{margin:3px 0!important}
+#md-today-list .navo-booking-open,#md-upcoming-list .navo-booking-open,#bookings-items .navo-client-booking-open{background:#dceefa!important;color:#205474!important;border:1px solid #9ac6de!important;border-radius:9px!important}
+/* NAVO V100: clear hierarchy and compact master actions */
+#inside>.card:first-child{padding:12px 14px!important;margin-bottom:8px!important}
+#inside>.card:first-child h1{font-size:19px!important;line-height:1.15!important;margin:0 0 4px!important}
+#inside>.card:first-child .phone{font-size:12px!important;color:#61766d}
+#inside>.card:first-child .row{align-items:flex-start;gap:10px}
+#inside>.card:first-child #logout{width:auto!important;min-width:0!important;padding:7px 10px!important;font-size:12px!important}
+#inside .master-actions{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:7px!important;margin:10px 0 0!important}
+#inside .master-actions button{width:auto!important;flex:0 1 auto!important;min-width:0!important;max-width:100%!important;padding:7px 10px!important;margin:0!important;font-size:12px!important;line-height:1.25!important;border-radius:9px!important;background:#edf3ef!important;color:#1d5546!important;border:1px solid #b7d2c3!important;box-shadow:none!important}
+.navo-service-directory{border:1px solid #c5dbd0;border-radius:13px;margin-top:14px;background:#f7faf8;overflow:hidden}
+.navo-service-directory>summary{padding:12px 13px;font-size:14px;font-weight:700;color:#194b3d;cursor:pointer;list-style-position:inside}
+.navo-service-directory>summary span{display:block;font-size:11px;font-weight:400;color:#637d70;margin:3px 0 0 20px}
+.navo-service-directory[open]>summary{border-bottom:1px solid #d7e5dd}
+.navo-service-directory>p{font-size:12px;padding:0 12px;margin:10px 0}
+#service-items{padding:4px 9px 10px;display:grid;gap:6px}
+#service-items>details.item{margin:0!important;padding:0 9px!important;border:1px solid #d6e5db!important;border-radius:10px!important;background:#fff!important;box-shadow:none!important}
+#service-items>details.item>summary{padding:10px 2px!important;font-size:13px!important;line-height:1.3!important}
+#service-items>details.item ul{margin:0 0 10px!important;padding-left:22px!important;font-size:12px;line-height:1.4}
+#service-items>details.item li{padding:4px 0!important;border-bottom:1px solid #f0f4f1}
+/* NAVO V101 one master entry point */
+#inside .navo-master-menu{margin:10px 0 0;border:1.5px solid #8fbbae;border-radius:12px;background:#f0f7f3;overflow:hidden}
+#inside .navo-master-menu>summary{cursor:pointer;padding:10px 13px;color:#174f3e;font-size:14px;font-weight:700;list-style-position:inside}
+#inside .navo-master-menu[open]>summary{border-bottom:1px solid #c4dbce;background:#e4f1e9}
+#inside .navo-master-menu .master-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:7px!important;margin:0!important;padding:10px!important}
+#inside .navo-master-menu .master-actions button{width:100%!important;min-height:0!important;max-width:100%!important;white-space:normal;padding:10px 6px!important;font-size:12px!important;line-height:1.3!important}
+@media(max-width:350px){#inside .navo-master-menu .master-actions{grid-template-columns:1fr}}
+/* NAVO V102: attractive, high-contrast booking time badges */
+#bookings-items .navo-appointment-date,#md-today-list .navo-appointment-date,#md-upcoming-list .navo-appointment-date{
+ display:block!important;width:fit-content!important;max-width:100%!important;
+ box-sizing:border-box!important;margin:9px 0!important;padding:9px 13px!important;
+ border-radius:11px!important;border:1.5px solid #6cc2a4!important;
+ background:linear-gradient(115deg,#d9f7e9,#ecfaf4)!important;
+ color:#105440!important;font-size:18px!important;font-weight:850!important;
+ letter-spacing:.2px!important;line-height:1.35!important;
+ box-shadow:0 2px 7px rgba(20,105,74,.12)!important;
+ font-variant-numeric:tabular-nums!important;
+}
+#md-today-list .navo-booking-summary .navo-appointment-date,#md-upcoming-list .navo-booking-summary .navo-appointment-date{font-size:18px!important;border:1.5px solid #6cc2a4!important;padding:9px 13px!important}
+@media(max-width:370px){#bookings-items .navo-appointment-date,#md-today-list .navo-appointment-date,#md-upcoming-list .navo-appointment-date{font-size:16px!important;padding:8px 10px!important}}
+/* NAVO V103 vivid appointment panel and live countdown */
+#bookings-items .navo-time-badge,#md-today-list .navo-time-badge,#md-upcoming-list .navo-time-badge{
+ display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+ gap:5px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;
+ padding:13px 14px!important;margin:10px 0!important;
+ border-radius:14px!important;border:2px solid #13a47c!important;
+ background:linear-gradient(125deg,#d5fff0 0%,#e5f5ff 100%)!important;
+ box-shadow:0 3px 12px rgba(0,130,100,.16)!important;
+}
+#bookings-items .navo-time-heading,#md-today-list .navo-time-heading,#md-upcoming-list .navo-time-heading{
+ font-size:14px!important;font-weight:900!important;letter-spacing:.9px!important;color:#0d6952!important;
+}
+#bookings-items .navo-time-when,#md-today-list .navo-time-when,#md-upcoming-list .navo-time-when{
+ font-size:clamp(20px,5.5vw,26px)!important;font-weight:900!important;line-height:1.2!important;
+ letter-spacing:.1px!important;color:#123b58!important;font-variant-numeric:tabular-nums!important;
+}
+#bookings-items .navo-time-remaining,#md-today-list .navo-time-remaining,#md-upcoming-list .navo-time-remaining{
+ font-size:15px!important;font-weight:800!important;line-height:1.3!important;
+ padding:7px 10px!important;border-radius:9px!important;
+ background:#fff0bc!important;color:#81500b!important;
+}
+.navo-time-remaining.navo-time-past{background:#e6ebef!important;color:#51636e!important}
+/* NAVO V104: vivid violet-blue date and time, no countdown */
+#bookings-items .navo-time-badge,#md-today-list .navo-time-badge,#md-upcoming-list .navo-time-badge{
+ background:linear-gradient(115deg,#e5ddff 0%,#d7edff 100%)!important;
+ border:2px solid #8a68d9!important;
+ box-shadow:0 3px 10px rgba(91,67,166,.16)!important;
+ padding:12px 14px!important;
+ gap:4px!important;
+}
+#bookings-items .navo-time-heading,#md-today-list .navo-time-heading,#md-upcoming-list .navo-time-heading{
+ color:#6638a9!important;font-size:14px!important;font-weight:900!important;
+}
+#bookings-items .navo-time-when,#md-today-list .navo-time-when,#md-upcoming-list .navo-time-when{
+ color:#233d9a!important;font-size:clamp(21px,5.8vw,27px)!important;font-weight:900!important;
+}
+#bookings-items .navo-time-remaining,#md-today-list .navo-time-remaining,#md-upcoming-list .navo-time-remaining{display:none!important}
+/* NAVO V105 master-first navigation */
+#md-general-view{margin:9px 0 13px!important;background:#e0edff!important;color:#164c91!important;border:1.5px solid #83ade5!important;font-weight:800!important;border-radius:11px!important;min-height:42px!important}
+/* V105: dashboard-first master experience */
+#ml-dashboard>h3{margin:0 0 10px;font-size:22px;color:#154e3c}
+#md-general-view{background:#e6f1ff!important;border:1.5px solid #88b8e6!important;color:#174a7a!important;font-weight:850!important;margin:8px 0 14px!important}
+#master-login:has(#ml-dashboard:not(.hide)) #ml-signin-form{display:none!important}
+/* NAVO V105: master-first navigation with explicit public view */
+#navo-return-master{margin:9px 0!important;padding:12px!important;background:#e5dbff!important;border:2px solid #9272d6!important;color:#4b258e!important;font-weight:850!important;border-radius:12px!important}
+#navo-return-master.hide{display:none!important}
+#md-general-view{background:#e6f1ff!important;border:1.5px solid #88b8e6!important;color:#174a7a!important;font-weight:850!important;margin:8px 0 14px!important}
+/* NAVO V106: only selected booking visible; override legacy display:block!important */
+#bookings-items>.navo-booking-tile[hidden],#md-today-list>.navo-booking-tile[hidden],#md-upcoming-list>.navo-booking-tile[hidden],
+.navo-client-booking-details[hidden],.navo-master-booking-details[hidden]{display:none!important}
+#bookings-items.navo-focused-booking>.navo-booking-tile:not(.navo-active-booking),
+#md-today-list.navo-focused-booking>.navo-booking-tile:not(.navo-active-booking),
+#md-upcoming-list.navo-focused-booking>.navo-booking-tile:not(.navo-active-booking){display:none!important}
+.navo-booking-tile.navo-active-booking{background:#fff!important;border-color:#7362ce!important;box-shadow:0 5px 19px rgba(90,65,155,.17)!important}
+/* NAVO V107 single-tap chat with clearly visible composer */
+.navo-booking-tile details.navo-chat{display:block!important;margin:10px 0!important;border:1.5px solid #80b9aa!important;border-radius:12px!important;background:#eef7f3!important;overflow:hidden!important}
+.navo-booking-tile details.navo-chat>summary{display:list-item!important;cursor:pointer!important;padding:12px!important;font-size:16px!important;font-weight:800!important;color:#175645!important}
+.navo-booking-tile details.navo-chat[open]>.navo-chat-content{display:block!important;padding:12px!important}
+.navo-booking-tile .navo-chat-input{display:block!important;width:100%!important;min-height:94px!important;margin:12px 0 8px!important;padding:12px!important;border:2px solid #63a7d2!important;border-radius:12px!important;background:white!important;color:#173f35!important;font-size:16px!important;resize:vertical!important}
+.navo-booking-tile .navo-chat-input:disabled{display:none!important}
+.navo-booking-tile .navo-chat-content>button.primary{display:block!important;width:100%!important;background:#197f70!important;color:#fff!important;font-weight:800!important}
+/* NAVO V108 master portfolio and public showcase */
+.navo-portfolio-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.navo-portfolio-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:11px;border:1px solid #d3dce8}
+.navo-master-showcase{margin:12px 0 4px;padding:13px;border-radius:15px;background:linear-gradient(135deg,#f1eaff,#e5f5ff);border:1.5px solid #b4a2e9}
+.navo-master-showcase h3{margin:0 0 8px;color:#49338a}
+.navo-master-showcase .navo-master-facts{display:flex;flex-wrap:wrap;gap:7px;margin:9px 0}
+.navo-master-showcase .navo-master-facts span{padding:7px 9px;background:white;border-radius:9px;font-weight:750;font-size:13px}
+.navo-master-showcase .navo-portfolio-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* NAVO V109 back navigation and attractive master profile */
+.navo-global-back{display:block!important;width:auto!important;margin:9px 12px!important;padding:9px 16px!important;border-radius:12px!important;font-weight:800!important;background:#e8efff!important;color:#304c8b!important;border:1px solid #a9bee8!important}
+.navo-client-master-profile{background:linear-gradient(135deg,#f0e9ff,#e4f5ff);border:2px solid #b4a1e7;border-radius:18px;padding:14px;margin:12px 0;box-shadow:0 4px 15px rgba(65,57,125,.12)}
+.navo-client-master-header{display:flex;gap:13px;align-items:center}.navo-client-master-header>div{min-width:0}.navo-client-master-header h3{margin:0 0 7px;color:#44358c;font-size:20px}.navo-client-master-header p{margin:5px 0;font-size:14px;font-weight:650}
+.navo-client-master-portrait{width:100px;height:110px;flex-shrink:0;object-fit:cover;border-radius:14px;border:2px solid white}
+.navo-client-master-rating{display:inline-block;padding:9px 12px;border-radius:11px;background:#fff1c7;color:#785009;font-weight:850}
+.navo-client-master-works{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.navo-client-master-works img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:11px;border:1px solid #b7b1d3}.navo-client-master-works p{grid-column:1/-1}
+.navo-master-detail-section{margin:12px 0;border:1.5px solid #b5c3e9;border-radius:15px;background:rgba(255,255,255,.9);overflow:hidden}.navo-master-detail-section>summary{cursor:pointer;padding:15px;font-weight:850;color:#33488a;list-style:none}.navo-master-detail-section>summary:after{content:'⌄';float:right}.navo-master-detail-section[open]>summary:after{content:'⌃'}.navo-master-detail-section>p,.navo-master-detail-section>.navo-client-master-works{margin:10px 14px 15px}.navo-master-detail-section>.item{margin:9px}.navo-client-master-header{margin-bottom:12px}
+</style><style id="navo-clean-preview">
+:root{color:#193f35;background:#f8faf8}body{background:#f8faf8;color:#193f35;font-size:14px}
+header{padding:11px 14px;border-bottom:1px solid #e5eee8;box-shadow:none}header .logo{font-size:24px}
+main{max-width:560px;padding:12px 12px 90px}
+.card{padding:14px!important;margin:9px 0!important;border:1px solid #e4ebe6!important;border-radius:13px!important;box-shadow:0 1px 4px #173f3508!important;background:#fff}
+h1{font-size:20px;margin:4px 0 10px}h2{font-size:17px;margin:6px 0 10px}h3{font-size:15px}p{line-height:1.4}
+label{font-size:13px;margin:10px 0 5px}input,select,textarea{font-size:14px!important;padding:10px!important;border-radius:9px!important;border-color:#d5e2d9!important}
+button{font-size:13px!important;padding:10px 12px!important;border-radius:9px!important;min-height:0!important}button.primary,.navo-master-action{background:#237353!important;color:#fff!important}button.secondary{background:#eff6f0!important;color:#245743!important;border-color:#dce8df!important}
+.tabs{gap:5px;margin:9px 0}.tabs button{padding:9px 5px!important}
+.navo-master-card,#catalog-items .navo-master-card{padding:9px!important;margin:6px 0!important;border:1px solid #e1eae4!important;border-radius:11px!important;box-shadow:none!important;background:white!important}
+.navo-master-head{gap:10px!important}.navo-master-avatar,#catalog-items .navo-master-avatar{width:46px!important;height:46px!important;border-radius:9px!important}
+.navo-master-info strong,#catalog-items .navo-master-info strong{font-size:13px!important}.navo-master-info p,#catalog-items .navo-master-info p{font-size:11px!important;line-height:1.35!important;margin:3px 0!important}
+.navo-master-action,#catalog-items .navo-master-action{padding:7px 9px!important;margin-top:7px!important;font-size:12px!important;border-radius:8px!important}
+#bookings-items>.navo-booking-tile,#md-today-list>.navo-booking-tile,#md-upcoming-list>.navo-booking-tile{border:1px solid #e0eae3!important;border-left:3px solid #2d8963!important;border-radius:11px!important;box-shadow:none!important;background:#fff!important;margin:7px 0!important;padding:10px!important}
+#bookings-items>.navo-booking-tile:nth-child(even),#md-today-list>.navo-booking-tile:nth-child(even),#md-upcoming-list>.navo-booking-tile:nth-child(even){background:#fff!important}
+#bookings-items>.navo-booking-tile>strong{font-size:14px!important;margin:0 0 4px!important}
+#bookings-items>.navo-booking-tile>p{font-size:12px!important;line-height:1.35!important;margin:3px 0!important}
+#bookings-items .navo-client-booking-open,#md-today-list .navo-booking-open,#md-upcoming-list .navo-booking-open{background:#e9f4ec!important;color:#216b4d!important;border:1px solid #d4e7d9!important;padding:8px 10px!important;font-size:12px!important;border-radius:8px!important}
+.navo-compact-section{border:1px solid #e2ebe5!important;border-radius:9px!important;margin:6px 0!important}
+.navo-compact-section>summary{background:#f6faf7!important;padding:9px 10px!important;font-size:12px!important}
+.item{padding:9px 0!important}.master-actions{gap:7px;margin:9px 0}.master-actions button{min-height:46px!important}
+@media(max-width:420px){main{padding:9px 10px 85px}.card{padding:12px!important}header{padding:9px 12px}}
+</style><style id="navo-vertical-v2">
+.tabs,.master-actions{display:flex!important;flex-direction:column!important;gap:7px!important}
+.tabs button,.master-actions button{display:block!important;width:100%!important;text-align:left!important;min-height:43px!important;padding:12px 14px!important}
+.navo-master-menu,.navo-service-directory{border:1px solid #e1ebe4;border-radius:11px;margin:9px 0;background:#fff;overflow:hidden}
+.navo-master-menu>summary,.navo-service-directory>summary{cursor:pointer;padding:12px 13px;font-size:14px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.navo-master-menu>summary:after,.navo-service-directory>summary:after{content:"⌄";font-size:20px;color:#32765b}
+.navo-master-menu[open]>summary:after,.navo-service-directory[open]>summary:after{content:"⌃"}
+.navo-service-directory>summary span{display:none}
+#ml-dashboard .tabs{margin:10px 0}
+#inside>.card:first-of-type .row{align-items:flex-start}
+@media(max-width:420px){.tabs button,.master-actions button{font-size:14px!important}}
+</style></head><body><header><div class="logo">navo<span>•</span></div><span class="muted">NAVO Services · Клиент</span></header><main><section id="login" class="card"><h1>Войти в NAVO</h1><p>Введите номер телефона. Мы отправим SMS с шестизначным кодом. Почта и пароль не нужны.</p><label for="phone">Номер телефона</label><input id="phone" type="tel" autocomplete="tel" value="+992 " placeholder="+992 900 00 00 00"><button id="send" class="primary full">Отправить SMS-код</button><div id="code-area" class="hide"><label for="code">Код из SMS</label><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><button id="verify" class="primary full">Подтвердить и войти</button></div><p class="status" id="login-status" role="status"></p></section><section id="inside" class="hide"><button id="navo-global-back" class="secondary navo-global-back" type="button">← Назад</button><div class="card"><div class="row"><div><h1>Добро пожаловать!</h1><div class="phone" id="account-phone"></div></div><button id="logout" class="secondary">Выйти</button></div><details class="navo-master-menu"><summary>✂ Окно мастера</summary><div class="master-actions"><button id="open-master-login" class="secondary" type="button">Войти в кабинет мастера</button><button id="open-master-registration" class="secondary" type="button">Зарегистрироваться мастером</button></div></details></div><button id="navo-return-master" class="secondary full hide" type="button">✂ Вернуться в кабинет мастера</button><div class="tabs"><button class="primary" id="tab-catalog">Найти мастера</button><button class="secondary" id="tab-bookings">Мои записи</button><button class="secondary" id="tab-profile">Мой профиль</button></div><section id="catalog" class="card"><h2>Каталог барбершопов</h2><p id="catalog-status" class="muted">Загружаем каталог…</p><div id="catalog-items"></div><details class="navo-service-directory"><summary>✂ Справочник всех услуг NAVO <span>Показать категории</span></summary><p class="muted">Это общий справочник услуг. Для записи выберите мастера выше.</p><div id="service-items"></div></details></section><section id="bookings" class="card hide"><h2>Мои записи</h2><p id="bookings-status" class="muted">Загружаем…</p><div id="bookings-items"></div></section><section id="profile" class="card hide"><h2>Мой профиль</h2><p>Номер телефона: <strong id="profile-phone"></strong></p><p class="muted">Вход выполняется по SMS. Регистрация мастера и вход по почте временно отключены.</p></section><section id="master-register" class="card hide"><h2>Регистрация мастера</h2><p class="muted">Сначала подтвердите почту цифровым кодом. Затем заполните анкету и выберите услуги. После регистрации профиль сразу появится в каталоге NAVO.</p><div id="master-reg-content"></div></section><section id="master-login" class="card hide"><div id="ml-signin-form"><h2>Войти как мастер</h2><p class="muted">Для уже зарегистрированных мастеров. Логин — подтверждённая почта, пароль — созданный при регистрации в NAVO.</p><label for="ml-email">Электронная почта</label><input id="ml-email" type="email" autocomplete="username" placeholder="name@example.com"><label for="ml-password">Пароль</label><div class="password-wrap"><input id="ml-password" type="password" autocomplete="current-password"><button class="password-eye" type="button" data-toggle-password="ml-password" aria-label="Показать пароль" aria-pressed="false">👁</button></div><button id="ml-submit" class="primary full" type="button">Войти в кабинет мастера</button><button id="ml-forgot" class="secondary full" type="button" style="margin-top:12px">Забыли пароль? Восстановить доступ</button><p id="ml-status" class="status" role="status"></p><div id="ml-reset-panel" class="hide" style="border:1px solid #cbded3;border-radius:16px;padding:16px;margin:14px 0"><h3>Восстановление пароля</h3><p class="muted">Укажите почту существующего аккаунта. Мы отправим письмо для восстановления доступа.</p><label for="ml-reset-email">Электронная почта</label><input id="ml-reset-email" type="email" autocomplete="email" placeholder="name@example.com"><button id="ml-reset-send" class="primary full" type="button">Отправить код восстановления</button><div id="ml-reset-step2" class="hide"><label for="ml-reset-code">Код восстановления из письма (6–8 цифр)</label><input id="ml-reset-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Введите код из письма"><label for="ml-reset-password">Новый пароль (от 8 символов)</label><div class="password-wrap"><input id="ml-reset-password" type="password" autocomplete="new-password" minlength="8"><button class="password-eye" type="button" data-toggle-password="ml-reset-password" aria-label="Показать пароль">👁</button></div><label for="ml-reset-password2">Повторите новый пароль</label><div class="password-wrap"><input id="ml-reset-password2" type="password" autocomplete="new-password" minlength="8"><button class="password-eye" type="button" data-toggle-password="ml-reset-password2" aria-label="Показать пароль">👁</button></div><button id="ml-reset-confirm" class="primary full" type="button">Проверить код и установить пароль</button></div><p id="ml-reset-status" class="status" role="status"></p><button id="ml-reset-back" class="secondary full" type="button">← Вернуться ко входу</button></div></div><div id="ml-dashboard" class="hide"><h3>Мой кабинет мастера</h3><button id="md-general-view" class="secondary full" type="button">🌐 Общий просмотр платформы</button><p id="ml-profile-info"></p><div class="tabs"><button id="md-tab-today" class="primary" type="button">Сегодня</button><button id="md-tab-upcoming" class="secondary" type="button">Все записи</button><button id="md-tab-profile" class="secondary" type="button">Изменить профиль</button></div><div id="md-today"><h3>Записи на сегодня</h3><p id="md-today-status" class="muted">Загрузка…</p><div id="md-today-list"></div></div><div id="md-upcoming" class="hide"><h3>Предстоящие записи</h3><p id="md-upcoming-status" class="muted">Загрузка…</p><div id="md-upcoming-list"></div></div><div id="md-profile" class="hide"><h3>Изменение профиля</h3><label>ФИО</label><input id="md-name"><label>Телефон</label><input id="md-phone" type="tel"><label>Город</label><input id="md-city"><label>Адрес места работы</label><input id="md-address"><label>Стаж работы (лет)</label><input id="md-experience" type="number" min="0" max="70" inputmode="numeric" placeholder="Например, 8"><label>Фотографии причёсок и работ (до 8 фото)</label><input id="md-portfolio" type="file" accept="image/jpeg,image/png,image/webp" multiple><div id="md-portfolio-preview" class="navo-portfolio-grid"></div><label>Фотография мастера</label><input id="md-photo" type="file" accept="image/jpeg,image/png,image/webp"><img id="md-photo-preview" style="display:none;width:110px;height:110px;object-fit:cover;border-radius:12px" alt="Фотография мастера"><h3>Услуги</h3><div id="md-services"></div><button id="md-save" class="primary full" type="button">Сохранить изменения</button><p id="md-save-status" class="status"></p><h3>Изменить электронную почту</h3><p class="muted">Новый адрес потребуется подтвердить шестизначным кодом.</p><label>Новая почта</label><input id="md-new-email" type="email"><button id="md-send-email" class="secondary full" type="button">Отправить код</button><label>Код из письма</label><input id="md-email-code" inputmode="numeric" maxlength="6" placeholder="000000"><button id="md-confirm-email" class="secondary full" type="button">Подтвердить новую почту</button><p id="md-email-status" class="status"></p></div><button class="secondary full" id="ml-back" type="button">← К клиентскому разделу</button></div></section></section></main><script>
+(()=>{'use strict';
+const ROOT='https://wvixivswjqxyunpoiqrl.supabase.co',KEY='sb_publishable_5rU0FOrKI2HO_kYI-FGYmQ_9Gxq3SwP',AK='navo-auth-session-v43';
+const el=id=>document.getElementById(id);let auth=null,phone='';
+const msg=t=>el('login-status').textContent=t;
+const load=()=>{try{return JSON.parse(localStorage.getItem(AK)||'null')}catch{return null}};
+const save=a=>{auth=a;localStorage.setItem(AK,JSON.stringify(a));sessionStorage.setItem(AK,JSON.stringify(a))};
+async function request(path,body,token,method='POST'){const r=await fetch(ROOT+path,{method,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.msg||j.message||j.error_description||j.error||'Ошибка сервера '+r.status);return j}
+async function current(){if(!auth?.access_token)throw Error('Нет активного входа');try{return await request('/auth/v1/user',null,auth.access_token,'GET')}catch(e){if(!auth.refresh_token)throw e;const n=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:auth.refresh_token});save({...n,expires_at:Date.now()+(Number(n.expires_in)||3600)*1000});return request('/auth/v1/user',null,auth.access_token,'GET')}}
+function normalize(){const d=el('phone').value.replace(/\D/g,'');return d.startsWith('992')?d:'992'+d}
+el('send').onclick=async()=>{phone=normalize();if(!/^992\d{9}$/.test(phone)){msg('Введите номер Таджикистана в формате +992 XX XXX XX XX');return}el('send').disabled=true;msg('Отправляем SMS…');try{await request('/auth/v1/otp',{phone:'+'+phone,create_user:true});el('code-area').classList.remove('hide');msg('SMS отправлено. Введите шестизначный код.');el('code').focus()}catch(e){msg('Ошибка отправки SMS: '+e.message)}finally{el('send').disabled=false}};
+el('verify').onclick=async()=>{const token=el('code').value.trim();if(!/^\d{6}$/.test(token)){msg('Введите 6 цифр из SMS');return}el('verify').disabled=true;msg('Проверяем SMS…');try{const a=await request('/auth/v1/verify',{phone:'+'+phone,token,type:'sms'});if(!a.access_token)throw Error('Не получена сессия');save({...a,navo_phone:'+'+phone,expires_at:Date.now()+(Number(a.expires_in)||3600)*1000});await enter()}catch(e){msg('Ошибка подтверждения: '+e.message)}finally{el('verify').disabled=false}};
+async function enter(){const u=await current();if(!u.phone_confirmed_at&&!u.email_confirmed_at)throw Error('Номер или почта не подтверждены');el('login').classList.add('hide');el('inside').classList.remove('hide');el('account-phone').textContent=u.phone||auth.navo_phone||'';el('profile-phone').textContent=u.phone||'';show('catalog');catalog();services();if(!new URLSearchParams(location.search).has('client'))await navoRestoreMasterHome()}
+async function navoRestoreMasterHome(){
+ const u=auth?.user;if(!u?.id)return;
+ try{
+  const profiles=await request('/rest/v1/master_applications?select=*&user_id=eq.'+encodeURIComponent(u.id),null,auth.access_token,'GET');
+  if(!Array.isArray(profiles)||!profiles.length)return;
+  const p=profiles[0];masterProfile=p;
+  show('master-login');el('ml-dashboard').classList.remove('hide');
+  el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address;
+  await masterOpen(auth,p);window.dispatchEvent(new Event('navo-master-open'));
+ }catch(e){console.warn('NAVO master home:',e.message)}
+}
+let navoPreviousSection='catalog',navoCurrentSection='catalog';
+function show(id){if(id!==navoCurrentSection){navoPreviousSection=navoCurrentSection;navoCurrentSection=id}const back=el('navo-return-master');if(back)back.classList.toggle('hide',!masterProfile||id==='master-login');for(const x of ['catalog','bookings','profile','master-register','master-login']){el(x).classList.toggle('hide',x!==id);if(el('tab-'+x))el('tab-'+x).className=x===id?'primary':'secondary'}}
+el('navo-global-back').onclick=()=>{if(navoCurrentSection==='master-login'&&masterProfile){show('catalog');catalog()}else if(navoCurrentSection==='catalog'){if(masterProfile&&masterSession)masterOpen(masterSession,masterProfile);else show('profile')}else if(navoPreviousSection&&navoPreviousSection!==navoCurrentSection)show(navoPreviousSection);else show('catalog')};
+for(const id of ['catalog','bookings','profile'])el('tab-'+id).onclick=()=>{show(id);if(id==='bookings')bookings()};
+async function catalog(){
+ try{
+ const rows=await request('/rest/v1/navo_test_master_catalog?select=*&limit=100',null,auth.access_token,'GET');
+ el('catalog-status').textContent=rows.length?'Выберите мастера, чтобы посмотреть услуги и цены':'Пока нет опубликованных мастеров';
+ const box=el('catalog-items');box.replaceChildren();
+ for(const row of rows){
+ const card=document.createElement('article');card.className='item navo-master-card';card.dataset.masterId=row.master_id||'';
+ card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Посмотреть услуги мастера '+(row.display_name||row.name||'NAVO'));
+ const head=document.createElement('div');head.className='navo-master-head';
+ if(row.photo_url){const img=document.createElement('img');img.src=row.photo_url;img.alt='Фото мастера';img.loading='lazy';img.className='navo-master-avatar';head.append(img)}
+ else{const avatar=document.createElement('span');avatar.className='navo-master-avatar navo-master-placeholder';avatar.textContent='✂';head.append(avatar)}
+ const content=document.createElement('div');content.className='navo-master-info';
+ const name=document.createElement('strong');name.textContent=row.salon_name||row.display_name||row.name||'Мастер NAVO';content.append(name);
+ const address=document.createElement('p');address.textContent='📍 '+([row.city,row.work_address].filter(Boolean).join(', ')||'Адрес уточняется');content.append(address);
+ if(Array.isArray(row.services)){const count=document.createElement('p');count.className='muted';count.textContent='Услуг: '+row.services.length;content.append(count)}
+ head.append(content);card.append(head);
+ const action=document.createElement('div');action.className='navo-master-action';action.textContent='Открыть профиль мастера  ›';card.append(action);
+ card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();card.click()}});
+ box.append(card)
+ }
+ }catch(e){el('catalog-status').textContent='Каталог временно недоступен: '+e.message}
+}
+async function services(){try{const rows=await request('/rest/v1/service_catalog?select=category,name&order=category.asc,name.asc&limit=500',null,auth.access_token,'GET');const box=el('service-items');box.replaceChildren();const groups={};for(const item of rows){(groups[item.category]??=[]).push(item.name)}for(const [name,items] of Object.entries(groups)){const section=document.createElement('details');section.className='item';const summary=document.createElement('summary');summary.style.cssText='cursor:pointer;font-weight:700;padding:7px 0';summary.textContent=name+' ('+items.length+')';section.append(summary);const ul=document.createElement('ul');for(const item of items){const li=document.createElement('li');li.textContent=item;li.style.padding='5px 0';ul.append(li)}section.append(ul);box.append(section)}}catch(e){el('service-items').textContent='Не удалось загрузить услуги: '+e.message}}
+async function bookings(){window.dispatchEvent(new Event('navo-client-bookings-loaded'))}
+
+const reg={email:'',verified:false};
+function masterStatus(t){const x=el('mr-status');if(x)x.textContent=t}
+function renderMasterRegistration(){
+ el('master-reg-content').innerHTML='<div id="mr-email-step"><label for="mr-email">Электронная почта — логин мастера</label><input id="mr-email" type="email" autocomplete="email" placeholder="name@example.com"><button class="primary full" id="mr-send" type="button">Отправить 6-значный код на почту</button><label for="mr-code">Код из письма</label><input id="mr-code" inputmode="numeric" maxlength="6" placeholder="000000"><button class="secondary full" id="mr-confirm" type="button">Подтвердить почту</button></div><div id="mr-details" class="hide"><p id="mr-confirmed" class="phone"></p><label>ФИО мастера *</label><input id="mr-name" autocomplete="name" required><label>Телефон *</label><input id="mr-phone" type="tel" autocomplete="tel" required><label>Номер паспорта *</label><input id="mr-passport" autocomplete="off" required><p class="muted">Номер паспорта хранится в закрытой анкете и не показывается клиентам. Не загружайте фотографию паспорта.</p><label>Город *</label><input id="mr-city" required><label>Адрес работы *</label><input id="mr-address" required><label>Фотография мастера *</label><input id="mr-photo" type="file" accept="image/jpeg,image/png,image/webp" required><img id="mr-preview" style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin:10px 0" alt="Фото мастера"><label>Пароль для будущего входа в NAVO (от 8 символов) *</label><div class="password-wrap"><input id="mr-password" type="password" autocomplete="new-password" minlength="8" required><button class="password-eye" type="button" data-toggle-password="mr-password" aria-label="Показать пароль" aria-pressed="false">👁</button></div><label>Повторите пароль *</label><div class="password-wrap"><input id="mr-password2" type="password" autocomplete="new-password" minlength="8" required><button class="password-eye" type="button" data-toggle-password="mr-password2" aria-label="Показать пароль" aria-pressed="false">👁</button></div><h3>Услуги мастера</h3><div id="mr-services">Загружаем список услуг…</div><button class="primary full" id="mr-submit" type="button">Зарегистрироваться и появиться в каталоге</button></div><p class="status" id="mr-status" role="status"></p>';
+ el('mr-email').value=reg.email;
+ el('mr-send').onclick=sendMasterEmail;
+ el('mr-confirm').onclick=confirmMasterEmail;
+ el('mr-submit').onclick=submitMaster;
+ el('mr-photo').onchange=()=>{const f=el('mr-photo').files[0];if(f){el('mr-preview').src=URL.createObjectURL(f);el('mr-preview').style.display='block'}};
+}
+async function sendMasterEmail(){
+ const email=el('mr-email').value.trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){masterStatus('Введите корректную почту');return}
+ const btn=el('mr-send');btn.disabled=true;masterStatus('Отправляем код…');
+ try{
+  const u=await current();
+  if(u.email&&u.email_confirmed_at&&u.email.toLowerCase()===email){reg.email=email;reg.verified=true;showMasterDetails();masterStatus('Эта почта уже подтверждена в вашем аккаунте.');return}
+  await request('/auth/v1/user',{email},auth.access_token,'PUT');
+  reg.email=email;reg.verified=false;masterStatus('Код отправлен. Введите шесть цифр из письма. Ссылку открывать не нужно.');
+ }catch(e){masterStatus('Не удалось отправить код: '+e.message)}finally{btn.disabled=false}
+}
+async function confirmMasterEmail(){
+ const code=el('mr-code').value.trim(),email=el('mr-email').value.trim().toLowerCase();
+ if(email!==reg.email||!/^[0-9]{6,8}$/.test(code)){masterStatus('Введите почту, на которую отправлен код, и ровно 6 цифр');return}
+ const btn=el('mr-confirm');btn.disabled=true;masterStatus('Проверяем код…');
+ try{
+  const result=await request('/auth/v1/verify',{type:'email_change',email,token:code});
+  if(result.access_token)save({...result,expires_at:Date.now()+(Number(result.expires_in)||3600)*1000});
+  const u=await current();
+  if(!u.email_confirmed_at||u.email?.toLowerCase()!==email)throw Error('Сервер ещё не подтвердил почту. Проверьте код или настройки подтверждения в Supabase.');
+  reg.verified=true;showMasterDetails();masterStatus('Почта подтверждена. Заполните анкету мастера.');
+ }catch(e){masterStatus('Ошибка подтверждения: '+e.message)}finally{btn.disabled=false}
+}
+async function showMasterDetails(){
+ el('mr-email-step').classList.add('hide');el('mr-details').classList.remove('hide');el('mr-confirmed').textContent='✓ Подтверждённая почта: '+reg.email;
+ const u=await current();el('mr-phone').value=u.phone||'';
+ try{const rows=await request('/rest/v1/service_catalog?select=id,category,name&order=category.asc,name.asc&limit=500',null,auth.access_token,'GET');const box=el('mr-services');box.replaceChildren();for(const item of rows){const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:center;font-weight:400;margin:10px 0';const cb=document.createElement('input');cb.type='checkbox';cb.value=item.id;cb.style.width='auto';label.append(cb,document.createTextNode(item.name+' · '+item.category));box.append(label)}}catch(e){masterStatus('Ошибка загрузки услуг: '+e.message)}
+}
+async function submitMaster(){
+ const btn=el('mr-submit');btn.disabled=true;masterStatus('Проверяем данные…');
+ try{
+  const u=await current();if(!reg.verified||!u.email_confirmed_at||u.email?.toLowerCase()!==reg.email)throw Error('Сначала подтвердите электронную почту');
+  const get=id=>el(id).value.trim(),password=el('mr-password').value;
+  if(!get('mr-name')||!get('mr-phone')||!get('mr-passport')||!get('mr-city')||!get('mr-address'))throw Error('Заполните все обязательные поля');
+  if(password.length<8||password!==el('mr-password2').value)throw Error('Пароль должен содержать не менее 8 символов и совпадать в обоих полях');
+  const services=[...el('mr-services').querySelectorAll('input:checked')].map(x=>Number(x.value));
+  if(!services.length)throw Error('Выберите хотя бы одну услугу');
+  const photo=el('mr-photo').files[0];if(!photo)throw Error('Добавьте фотографию');
+  if(photo.size>5*1024*1024||!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Фото должно быть JPG, PNG или WebP, до 5 МБ');
+  const path=u.id+'/portrait-'+Date.now()+'.'+photo.type.split('/')[1];
+  const up=await fetch(ROOT+'/storage/v1/object/master-photos/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+auth.access_token,'Content-Type':photo.type},body:photo});
+  if(!up.ok){const e=await up.json().catch(()=>({}));throw Error('Не удалось сохранить фото: '+(e.message||up.status))}
+  const photo_url=ROOT+'/storage/v1/object/public/master-photos/'+path;
+  await request('/auth/v1/user',{password},auth.access_token,'PUT');
+  const row={user_id:u.id,full_name:get('mr-name'),phone:get('mr-phone'),email:reg.email,passport_number:get('mr-passport'),city:get('mr-city'),work_address:get('mr-address'),photo_url,services,status:'pending'};
+  await request('/rest/v1/master_applications?on_conflict=user_id',row,auth.access_token,'POST');window.dispatchEvent(new Event('navo-master-registered'));
+  masterStatus('✓ Анкета сохранена. Мастер доступен в каталоге NAVO. Пароль сохранён для будущего входа.');
+  el('mr-submit').disabled=true;el('mr-password').value='';el('mr-password2').value='';
+ }catch(e){masterStatus('Ошибка: '+e.message);btn.disabled=false}
+}
+el('open-master-registration').onclick=()=>{show('master-register');renderMasterRegistration()};
+el('open-master-login').onclick=()=>{show('master-login');if(masterSession&&masterProfile){masterOpen(masterSession,masterProfile);return}el('ml-signin-form').classList.remove('hide');el('ml-status').textContent='';el('ml-dashboard').classList.add('hide')};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-toggle-password]');if(!b)return;const input=el(b.dataset.togglePassword);if(!input)return;const showing=input.type==='password';input.type=showing?'text':'password';b.setAttribute('aria-pressed',String(showing));b.setAttribute('aria-label',showing?'Скрыть пароль':'Показать пароль');b.textContent=showing?'🙈':'👁'});
+let masterSession=null,masterProfile=null,masterEmailPending='';
+const mstatus=(id,t)=>{const e=el(id);if(e)e.textContent=t};
+function masterTab(id){for(const k of ['today','upcoming','profile']){el('md-'+k).classList.toggle('hide',k!==id);el('md-tab-'+k).className=k===id?'primary':'secondary'}}
+for(const k of ['today','upcoming','profile'])el('md-tab-'+k).onclick=()=>masterTab(k);
+function masterBookingRow(b){const d=document.createElement('div');d.className='item';const when=document.createElement('strong');when.textContent=new Date(b.starts_at).toLocaleString('ru-RU',{timeZone:'Asia/Dushanbe',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});const info=document.createElement('p');info.textContent='Клиент: '+(b.client_phone||'номер не указан')+' · '+b.status+' · '+(b.total_somoni??'—')+' сомони';d.append(when,info);return d}
+async function masterBookings(){window.dispatchEvent(new Event('navo-master-bookings-loaded'))}
+async function masterEditLoad(){
+ const p=masterProfile;for(const [id,key] of [['md-name','full_name'],['md-phone','phone'],['md-city','city'],['md-address','work_address']])el(id).value=p[key]||'';
+ el('md-experience').value=p.experience_years??'';const gallery=el('md-portfolio-preview');gallery.replaceChildren();for(const url of (Array.isArray(p.portfolio_urls)?p.portfolio_urls:[])){const img=document.createElement('img');img.src=url;img.alt='Работа мастера';gallery.append(img)}
+ const box=el('md-services');box.replaceChildren();const rows=await request('/rest/v1/service_catalog?select=id,name,category&order=category.asc,name.asc&limit=500',null,masterSession.access_token,'GET');
+ for(const item of rows){const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:center;font-weight:400;margin:9px 0';const cb=document.createElement('input');cb.type='checkbox';cb.value=item.id;cb.checked=Array.isArray(p.services)&&p.services.some(x=>String(x)===String(item.id));cb.style.width='auto';label.append(cb,document.createTextNode(item.name+' · '+item.category));box.append(label)}
+}
+async function masterOpen(signed,p){
+ masterSession=signed;masterProfile=p;show('master-login');el('ml-signin-form').classList.add('hide');el('ml-dashboard').classList.remove('hide');el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address+' · '+p.status;masterTab('today');
+ try{await Promise.all([masterBookings(),masterEditLoad()])}catch(e){mstatus('md-today-status','Ошибка загрузки: '+e.message)}
+}
+el('md-photo').onchange=()=>{const f=el('md-photo').files[0];if(f){el('md-photo-preview').src=URL.createObjectURL(f);el('md-photo-preview').style.display='block'}};
+el('md-save').onclick=async()=>{
+ const btn=el('md-save');btn.disabled=true;mstatus('md-save-status','Сохраняем…');
+ try{
+  const p=masterProfile,token=masterSession.access_token,uid=masterSession.user.id;
+  const services=[...el('md-services').querySelectorAll('input:checked')].map(x=>Number(x.value));if(!services.length)throw Error('Выберите хотя бы одну услугу');
+  const exp=el('md-experience').value.trim();if(exp&&(!Number.isInteger(Number(exp))||Number(exp)<0||Number(exp)>70))throw Error('Укажите стаж от 0 до 70 лет');const row={full_name:el('md-name').value.trim(),phone:el('md-phone').value.trim(),city:el('md-city').value.trim(),work_address:el('md-address').value.trim(),services,experience_years:exp===''?null:Number(exp)};
+  if(Object.values(row).some(x=>typeof x==='string'&&!x))throw Error('Заполните все поля');
+  const file=el('md-photo').files[0];
+  if(file){if(file.size>5242880||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Фото должно быть JPG, PNG или WebP до 5 МБ');
+   const path=uid+'/portrait-'+Date.now()+'.'+file.type.split('/')[1];const upload=await fetch(ROOT+'/storage/v1/object/master-photos/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':file.type},body:file});
+   if(!upload.ok)throw Error('Не удалось загрузить фотографию');row.photo_url=ROOT+'/storage/v1/object/public/master-photos/'+path;
+  }
+  const portfolioFiles=[...el('md-portfolio').files];const portfolioUrls=Array.isArray(p.portfolio_urls)?[...p.portfolio_urls]:[];
+  if(portfolioFiles.length+portfolioUrls.length>8)throw Error('Можно сохранить не более 8 фотографий работ');
+  for(const file of portfolioFiles){
+   if(file.size>5242880||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Фото работ: JPG, PNG или WebP до 5 МБ');
+   const path=uid+'/work-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+file.type.split('/')[1];
+   const upload=await fetch(ROOT+'/storage/v1/object/master-photos/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':file.type},body:file});
+   if(!upload.ok)throw Error('Не удалось загрузить фото работы');
+   portfolioUrls.push(ROOT+'/storage/v1/object/public/master-photos/'+path);
+  }
+  row.portfolio_urls=portfolioUrls;
+  const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(uid),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(row)});
+  const data=await res.json().catch(()=>[]);if(!res.ok)throw Error(data.message||'Ошибка сохранения '+res.status);if(!data.length)throw Error('Редактирование этой анкеты пока ограничено её статусом');
+  masterProfile={...p,...data[0]};el('md-portfolio').value='';masterEditLoad().catch(console.error);window.dispatchEvent(new Event('navo-master-saved'));mstatus('md-save-status','✓ Изменения сохранены');el('ml-profile-info').textContent=masterProfile.full_name+' · '+masterProfile.city+' · '+masterProfile.work_address;
+ }catch(e){mstatus('md-save-status','Ошибка: '+e.message)}finally{btn.disabled=false}
+};
+el('md-send-email').onclick=async()=>{
+ const email=el('md-new-email').value.trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){mstatus('md-email-status','Введите корректную почту');return}
+ try{await request('/auth/v1/user',{email},masterSession.access_token,'PUT');masterEmailPending=email;mstatus('md-email-status','Код отправлен. Введите шесть цифр из письма.')}catch(e){mstatus('md-email-status','Ошибка отправки: '+e.message)}
+};
+el('md-confirm-email').onclick=async()=>{
+ const token=el('md-email-code').value.trim();if(!masterEmailPending||!/^[0-9]{6}$/.test(token)){mstatus('md-email-status','Введите шестизначный код');return}
+ try{const verified=await request('/auth/v1/verify',{type:'email_change',email:masterEmailPending,token});
+  if(verified.access_token)masterSession={...verified,expires_at:Date.now()+(Number(verified.expires_in)||3600)*1000};
+  const u=await request('/auth/v1/user',null,masterSession.access_token,'GET');
+  if(u.email?.toLowerCase()!==masterEmailPending||!u.email_confirmed_at)throw Error('Почта ещё не подтверждена сервером');
+  const response=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(u.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({email:masterEmailPending})});
+  const data=await response.json().catch(()=>[]);if(!response.ok||!data.length)throw Error('Почта подтверждена, но обновить анкету не удалось. Обратитесь к администратору.');
+  masterProfile=data[0];save(masterSession);masterEmailPending='';mstatus('md-email-status','✓ Почта подтверждена и обновлена');
+ }catch(e){mstatus('md-email-status','Ошибка: '+e.message)}
+};
+el('navo-return-master').onclick=()=>{if(masterSession&&masterProfile)masterOpen(masterSession,masterProfile);else navoRestoreMasterHome()};
+el('md-general-view').onclick=()=>{show('catalog');catalog()};
+el('ml-back').textContent='🌐 Общий просмотр NAVO';el('ml-back').onclick=()=>{show('catalog');catalog()};
+async function handleRecoveryLink(){
+ const hash=new URLSearchParams(location.hash.slice(1)),query=new URLSearchParams(location.search);
+ const access=hash.get('access_token'),type=hash.get('type'),error=hash.get('error_description')||query.get('error_description');
+ if(!access&&type!=='recovery'&&!error)return;
+ const panel=el('ml-reset-panel');el('inside').classList.remove('hide');el('login').classList.add('hide');el('master-login').classList.remove('hide');panel.classList.remove('hide');
+ el('ml-reset-step2').classList.remove('hide');el('ml-reset-send').classList.add('hide');el('ml-reset-code').classList.add('hide');
+ const status=el('ml-reset-status');if(error){status.textContent='Ссылка недействительна или срок её действия истёк: '+error;return}
+ if(access&&type==='recovery'){window.navoRecoveryToken=access;status.textContent='Ссылка подтверждена. Придумайте новый пароль и повторите его.';history.replaceState(null,'',location.pathname+'?v=82')}
+}
+el('ml-forgot').onclick=()=>{el('ml-reset-email').value=el('ml-email').value.trim();el('ml-reset-panel').classList.remove('hide');el('ml-reset-step2').classList.remove('hide');el('ml-reset-code').classList.remove('hide');el('ml-reset-send').classList.remove('hide');el('ml-reset-status').textContent='Введите временный код из письма в отдельное поле ниже, затем придумайте новый пароль.';el('ml-reset-email').focus()};
+el('ml-reset-back').onclick=()=>el('ml-reset-panel').classList.add('hide');
+el('ml-reset-send').onclick=async()=>{
+ const email=el('ml-reset-email').value.trim().toLowerCase(),status=el('ml-reset-status'),btn=el('ml-reset-send');
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){status.textContent='Введите правильный адрес почты';return}
+ btn.disabled=true;status.textContent='Отправляем письмо…';
+ try{await request('/auth/v1/recover?redirect_to='+encodeURIComponent('https://f0707.github.io/Navo-services/?recovery=1'),{email});el('ml-reset-step2').classList.remove('hide');status.textContent='Если аккаунт существует, письмо отправлено. Введите код из письма (6–8 цифр). Если пришла ссылка, откройте её для восстановления.'}
+ catch(e){status.textContent='Ошибка отправки: '+e.message}
+ finally{btn.disabled=false}
+};
+el('ml-reset-confirm').onclick=async()=>{
+ const email=el('ml-reset-email').value.trim().toLowerCase(),code=el('ml-reset-code').value.trim(),password=el('ml-reset-password').value,again=el('ml-reset-password2').value,status=el('ml-reset-status'),btn=el('ml-reset-confirm');
+ if(!window.navoRecoveryToken&&!/^[0-9]{6,8}$/.test(code)){status.textContent='Введите код из письма (6–8 цифр)';return}
+ if(password.length<8){status.textContent='Пароль должен содержать не менее 8 символов';return}
+ if(password!==again){status.textContent='Пароли не совпадают';return}
+ btn.disabled=true;status.textContent='Проверяем код…';
+ try{
+ const verified=window.navoRecoveryToken?{access_token:window.navoRecoveryToken}:await request('/auth/v1/verify',{type:'recovery',email,token:code});
+ if(!verified.access_token)throw Error('Код подтверждён, но сервер не предоставил доступ для смены пароля');
+ await request('/auth/v1/user',{password},verified.access_token,'PUT');window.navoRecoveryToken=null;
+ el('ml-email').value=email;el('ml-password').value='';el('ml-reset-panel').classList.add('hide');el('ml-status').textContent='Пароль успешно установлен. Введите новый пароль и нажмите «Войти в кабинет мастера».';
+ el('ml-reset-code').value='';el('ml-reset-password').value='';el('ml-reset-password2').value='';
+ }catch(e){status.textContent='Не удалось восстановить пароль: '+e.message}
+ finally{btn.disabled=false}
+};
+el('ml-submit').onclick=async()=>{
+ const email=el('ml-email').value.trim().toLowerCase(),password=el('ml-password').value,button=el('ml-submit'),status=el('ml-status');
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!password){status.textContent='Введите почту и пароль';return}
+ button.disabled=true;status.textContent='Проверяем данные…';
+ try{
+  const signed=await request('/auth/v1/token?grant_type=password',{email,password});
+  if(!signed.access_token)throw Error('Не удалось войти');
+  const profiles=await request('/rest/v1/master_applications?select=*&user_id=eq.'+encodeURIComponent(signed.user.id),null,signed.access_token,'GET');
+  if(!profiles.length){
+   save({...signed,expires_at:Date.now()+(Number(signed.expires_in)||3600)*1000});
+   reg.email=email;reg.verified=!!signed.user.email_confirmed_at;
+   if(!reg.verified)throw Error('Сначала подтвердите электронную почту через письмо.');
+   show('master-register');await showMasterDetails();
+   el('mr-email').value=email;
+   el('mr-password').value='';el('mr-password2').value='';
+   masterStatus('✓ Аккаунт и почта уже подтверждены. Повторная регистрация почты не нужна. Заполните анкету мастера, выберите услуги и сохраните.');
+   status.textContent='Аккаунт найден. Открыта анкета мастера для завершения регистрации.';
+   return;
+  }
+  const p=profiles[0];if(p.email.toLowerCase()!==email)throw Error('Адрес почты не совпадает с адресом регистрации мастера');
+  save({...signed,expires_at:Date.now()+(Number(signed.expires_in)||3600)*1000});
+  status.textContent='Вход выполнен. Анкета мастера: '+('доступна для тестирования')+'.';
+  el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address;
+  await masterOpen(signed,p);window.dispatchEvent(new Event('navo-master-open'));
+  el('account-phone').textContent=signed.user.phone||'';
+  el('profile-phone').textContent=signed.user.phone||'';
+ }catch(e){status.textContent='Ошибка входа: '+(e.message==='Invalid login credentials'?'Неверная почта или пароль':e.message)}
+ finally{button.disabled=false}
+};
+
+if(location.hash.includes('type=recovery')||location.hash.includes('error_description'))setTimeout(()=>handleRecoveryLink().catch(console.error),100);
+window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,show,catalog,masterEditLoad,masterBookings,bookings};
+el('logout').onclick=async()=>{const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
+(async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){auth=null;localStorage.removeItem(AK);el('login').classList.remove('hide');msg('Для входа подтвердите номер по SMS.')}}})();
+})();
+</script><script src="./navo-prices-v72.js?v=111" defer></script><script src="./navo-booking-v73.js?v=112" defer></script><script src="./navo-inbox-v78.js?v=91" defer></script></body></html>
