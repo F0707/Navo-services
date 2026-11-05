@@ -8,12 +8,12 @@ async function read(path,t){return a().request(path,null,t,'GET')}
 async function markRead(id,uid,token){const r=await fetch(a().ROOT+'/rest/v1/navo_message_reads?on_conflict=booking_id,user_id',{method:'POST',headers:{apikey:a().KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:JSON.stringify({booking_id:id,user_id:uid,last_read_at:new Date().toISOString()})});if(!r.ok)throw Error('Не удалось отметить прочитанным')}
 function setup(){
  const dash=$('ml-dashboard');if(!dash||$('md-tab-inbox'))return;
- const tabs=$('md-tab-today')?.parentElement;if(!tabs)return;
+ const tabs=$('md-tab-upcoming')?.parentElement;if(!tabs)return;
  tabs.classList.add('navo-master-tabs');
- const btn=document.createElement('button');btn.id='md-tab-inbox';btn.className='secondary';btn.type='button';btn.textContent='💬 Сообщения';tabs.append(btn);
+ const btn=document.createElement('button');btn.id='md-tab-inbox';btn.className='secondary full';btn.type='button';btn.textContent='💬 Сообщения';dash.insertBefore(btn,tabs);
  const panel=document.createElement('div');panel.id='md-inbox';panel.className='hide';panel.append(label('h3','Сообщения клиентов'),label('p','Здесь появляются сообщения по вашим записям.'));const list=document.createElement('div');list.id='md-inbox-list';panel.append(list);dash.insertBefore(panel,$('md-today'));
- btn.onclick=()=>{for(const id of ['md-today','md-upcoming','md-profile'])$(id)?.classList.add('hide');panel.classList.remove('hide');for(const b of tabs.querySelectorAll('button'))b.className=b===btn?'primary':'secondary';update(true)};
- for(const id of ['md-tab-today','md-tab-upcoming','md-tab-profile'])$(id)?.addEventListener('click',()=>{panel.classList.add('hide');btn.className='secondary'});
+ btn.onclick=()=>{for(const id of ['md-today','md-upcoming','md-profile'])$(id)?.classList.add('hide');panel.classList.remove('hide');btn.className='primary full';update(true)};
+ for(const id of ['md-tab-today','md-tab-upcoming','md-tab-profile'])$(id)?.addEventListener('click',()=>{panel.classList.add('hide');btn.className='secondary full'});
 }
 async function update(render){
  if(busy)return;const session=a()?.getSession?.(),dash=$('ml-dashboard');if(!session?.access_token||!dash||dash.classList.contains('hide'))return;
