@@ -32,6 +32,17 @@ async function openMaster(master){
  const avatar=document.createElement('div');avatar.className='navo-selected-master-avatar';
  if(master.photo_url&&/^https:\/\//i.test(master.photo_url)){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото профиля мастера '+(master.display_name||'NAVO');photo.loading='eager';photo.decoding='async';photo.fetchPriority='high';photo.onerror=()=>{photo.remove();avatar.textContent='✂'};avatar.append(photo)}else{avatar.textContent='✂'}
  const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));profile.append(avatar,info);box.append(profile);
+ const address=[master.city,master.work_address].filter(Boolean).join(', ');
+ if(address){
+  const location=document.createElement('section');location.className='navo-master-location';
+  location.append(text('h3','📍 Как найти мастера'));
+  location.append(text('p',address));
+  const map=document.createElement('iframe');map.className='navo-master-map';map.title='Карта расположения мастера';map.loading='lazy';map.referrerPolicy='no-referrer-when-downgrade';map.src='https://maps.google.com/maps?q='+encodeURIComponent(address+', Таджикистан')+'&z=16&output=embed';location.append(map);
+  const directions=document.createElement('a');directions.className='navo-master-directions';directions.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address+', Таджикистан');directions.target='_blank';directions.rel='noopener noreferrer';directions.textContent='🧭 Построить маршрут в Google Картах';location.append(directions);
+  location.append(text('small','Местоположение найдено по адресу мастера. Перед поездкой проверьте точку на карте.'));
+  box.append(location)
+ }
+
  const status=text('p','Загружаем услуги…');box.append(status);
  try{
  const rows=await get('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc');
