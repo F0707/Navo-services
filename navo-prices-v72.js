@@ -112,5 +112,5 @@ function wireSaving(){
  const register=$('mr-submit');if(register)register.addEventListener('click',e=>{try{window.__navoRegPrices=chosen($('mr-services'))}catch(err){e.preventDefault();e.stopImmediatePropagation();alert(err.message)}},true);
  window.addEventListener('navo-master-registered',async()=>{try{const auth=api().getAuth();await savePrices(auth.user.id,auth.access_token,window.__navoRegPrices||[])}catch(e){alert('Анкета сохранена, но цены: '+e.message)}});
 }
-document.addEventListener('DOMContentLoaded',()=>{observeCatalog();watchForms();wireSaving()});
+document.addEventListener('DOMContentLoaded',()=>{watchForms();wireSaving()});
 })();
