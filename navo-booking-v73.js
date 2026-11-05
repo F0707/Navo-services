@@ -7,6 +7,25 @@ async function rpc(name,args,t=token()){return api().request('/rest/v1/rpc/'+nam
 const dateText=d=>new Date(d).toLocaleString('ru-RU',{timeZone:'Asia/Dushanbe',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 function text(tag,value){const e=document.createElement(tag);e.textContent=value;return e}
 function button(label,action){const b=document.createElement('button');b.type='button';b.className='primary full';b.textContent=label;b.onclick=action;return b}
+function dateTimeControls(initialDate,initialTime){
+ const date=document.createElement('select'),time=document.createElement('select');
+ date.className='navo-date-select';time.className='navo-time-select';
+ date.setAttribute('aria-label','Дата посещения');time.setAttribute('aria-label','Время посещения');
+ const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const base=new Date(today+'T12:00:00+05:00');
+ const formatter=new Intl.DateTimeFormat('ru-RU',{timeZone:'Asia/Dushanbe',weekday:'short',day:'numeric',month:'long'});
+ for(let i=0;i<91;i++){
+ const d=new Date(base.getTime()+i*86400000),key=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+ const opt=document.createElement('option');opt.value=key;opt.textContent=formatter.format(d);date.append(opt);
+ }
+ if(initialDate&&initialDate>=today&&initialDate<=date.options[date.options.length-1].value)date.value=initialDate;
+ for(let h=0;h<24;h++)for(const m of ['00','30']){
+ const val=String(h).padStart(2,'0')+':'+m,opt=document.createElement('option');opt.value=val;opt.textContent=val;time.append(opt)
+ }
+ time.value=initialTime||'10:00';
+ return {date,time}
+}
+const mobileDateCss=document.createElement('style');mobileDateCss.textContent='.navo-date-select,.navo-time-select{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;border:1px solid #9eafa5;border-radius:12px;background:#fff;color:#173f35;font:inherit;font-size:16px;padding:13px;margin:10px 0 15px;appearance:auto}';document.head.append(mobileDateCss);
 async function openMaster(master){
  const box=$('catalog-items');box.replaceChildren();box.append(button('← К списку мастеров',()=>api().catalog()),text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));
  const status=text('p','Загружаем услуги…');box.append(status);
@@ -24,9 +43,8 @@ async function openMaster(master){
  const name=text('span',item.name);name.style.flex='1';const price=text('strong',item.price_somoni+' сом.');line.append(check,name,price);group.append(line)}box.append(group)
  }
  box.append(total,text('h3','Дата и время посещения'));
- const date=document.createElement('input');date.type='date';const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());date.min=today;date.value=today;
- const time=document.createElement('input');time.type='time';time.value='10:00';time.step=1800;
- const note=text('p','Время указано по Душанбе. Мастер должен подтвердить доступность выбранного времени вне приложения, пока расписание не настроено.');
+ const {date,time}=dateTimeControls();
+ const note=text('p','Выберите дату и время из списка. Время указано по Душанбе. Мастер должен подтвердить доступность выбранного времени вне приложения, пока расписание не настроено.');
  const result=text('p','');const submit=button('Записаться к мастеру',async()=>{
  try{
  if(!chosen.size)throw Error('Сначала выберите услуги');
@@ -140,9 +158,8 @@ async function renderClientCards(){
  if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(code){const codeBox=document.createElement('div');codeBox.className='item';codeBox.style.textAlign='center';const caption=text('p','Код подтверждения обслуживания');const digits=text('h2',String(code).padStart(4,'0'));digits.style.cssText='font-size:34px;letter-spacing:8px;margin:8px 0';codeBox.append(caption,digits,text('p','После окончания обслуживания сообщите эти 4 цифры мастеру. Мастер введёт код, чтобы завершить запись.'));detail.append(codeBox)}}catch(e){}}
  if(['requested','confirmed'].includes(b.status)){
  const edit=button('Изменить дату и время',()=>{form.hidden=!form.hidden});const form=document.createElement('div');form.hidden=true;
- const date=document.createElement('input');date.type='date';const time=document.createElement('input');time.type='time';time.step=1800;
  const currentDate=new Date(b.starts_at);const fmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(currentDate).replace(' ','T');
- date.value=fmt.slice(0,10);date.min=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());time.value=fmt.slice(11,16);
+ const {date,time}=dateTimeControls(fmt.slice(0,10),fmt.slice(11,16));
  const feedback=text('p','');
  const save=button('Сохранить новое время',async()=>{try{if(!date.value||!time.value)throw Error('Выберите дату и время');const dt=new Date(date.value+'T'+time.value+':00+05:00');if(!Number.isFinite(dt.getTime()))throw Error('Некорректная дата');save.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'reschedule',p_starts:dt.toISOString()});await clientCards()}catch(e){feedback.textContent='Ошибка: '+e.message;save.disabled=false}});
  form.append(text('p','Новая дата'),date,text('p','Новое время'),time,save,feedback);
