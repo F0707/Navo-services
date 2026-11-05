@@ -152,24 +152,9 @@ function navoTimeBadge(iso){
  const wrap=document.createElement('div');wrap.className='navo-time-badge';
  const heading=text('div','ВРЕМЯ ЗАПИСИ');heading.className='navo-time-heading';
  const when=text('div',dateText(iso));when.className='navo-time-when';
- const remaining=text('div','');remaining.className='navo-time-remaining';
- wrap.append(heading,when,remaining);wrap.dataset.appointmentAt=String(new Date(iso).getTime());
- navoUpdateCountdown(remaining,Number(wrap.dataset.appointmentAt));
+ wrap.append(heading,when);
  return wrap;
 }
-function navoUpdateCountdown(node,target){
- const diff=target-Date.now();
- if(!Number.isFinite(diff)){node.textContent='Время уточняется';return}
- if(diff<=0){node.textContent='Время записи наступило';node.classList.add('navo-time-past');return}
- node.classList.remove('navo-time-past');
- const mins=Math.ceil(diff/60000),days=Math.floor(mins/1440),hours=Math.floor(mins%1440/60),minutes=mins%60;
- node.textContent='⏳ До записи: '+(days?days+' дн. ':'')+(hours?hours+' ч. ':'')+minutes+' мин.';
-}
-if(!window.navoCountdownTimer)window.navoCountdownTimer=setInterval(()=>{
- document.querySelectorAll('.navo-time-badge[data-appointment-at]').forEach(el=>{
- const node=el.querySelector('.navo-time-remaining');if(node)navoUpdateCountdown(node,Number(el.dataset.appointmentAt));
- });
-},30000);
 function navoCompactSection(title,child,open=false){
  const section=document.createElement('details');section.className='navo-compact-section';section.open=open;
  const summary=document.createElement('summary');summary.textContent=title;
