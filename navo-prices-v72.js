@@ -38,17 +38,21 @@ async function clientMaster(master){
  const address=document.createElement('p');address.textContent='📍 '+([master.city,master.work_address].filter(Boolean).join(', ')||'Адрес уточняется');identity.append(address);
  if(master.experience_years!==null&&master.experience_years!==undefined){const years=document.createElement('p');years.textContent='🏅 Стаж работы: '+master.experience_years+' лет';identity.append(years)}
  header.append(identity);profile.append(header);
- const rating=document.createElement('p');rating.className='navo-client-master-rating';rating.textContent='⭐ Рейтинг: загружается…';profile.append(rating);
+ const phone=document.createElement('p');phone.textContent='📞 '+(master.phone||'Номер телефона не указан');identity.append(phone);
+ const makeSection=(label,open=false)=>{const d=document.createElement('details');d.className='navo-master-detail-section';d.open=open;const summary=document.createElement('summary');summary.textContent=label;d.append(summary);profile.append(d);return d};
+ const about=makeSection('👤 Информация о мастере',true);
+ const rating=document.createElement('p');rating.className='navo-client-master-rating';rating.textContent='⭐ Рейтинг: загружается…';about.append(rating);
+ const gallery=makeSection('✂ Выполненные работы и виды причёсок');
  const works=document.createElement('div');works.className='navo-client-master-works';
- const worksTitle=document.createElement('h4');worksTitle.textContent='✂ Выполненные работы';profile.append(worksTitle);
  for(const url of (Array.isArray(master.portfolio_urls)?master.portfolio_urls:[])){const image=document.createElement('img');image.src=url;image.loading='lazy';image.alt='Причёска, выполненная мастером';works.append(image)}
  if(!works.children.length){const empty=document.createElement('p');empty.textContent='Фотографии работ пока не добавлены';works.append(empty)}
- profile.append(works);box.append(profile);
+ gallery.append(works);box.append(profile);
  const tokenForRating=api().getAuth()?.access_token;
  read('/rest/v1/navo_master_review_summary?select=average_stars,reviews_count&master_id=eq.'+encodeURIComponent(master.master_id),tokenForRating).then(rows=>{rating.textContent=rows.length?'⭐ Рейтинг: '+rows[0].average_stars+' / 5 · '+rows[0].reviews_count+' оценок':'⭐ Пока нет оценок'}).catch(()=>{rating.textContent='⭐ Рейтинг пока недоступен'});
 
  const info=document.createElement('p');info.textContent=[master.city,master.work_address].filter(Boolean).join(', ');box.append(info);
- const message=document.createElement('p');message.className='muted';message.textContent='Загружаем услуги…';box.append(message);
+ const servicesPanel=document.createElement('details');servicesPanel.className='navo-master-detail-section';servicesPanel.open=false;const servicesSummary=document.createElement('summary');servicesSummary.textContent='💈 Виды услуг, цены и запись';servicesPanel.append(servicesSummary);box.append(servicesPanel);
+ const message=document.createElement('p');message.className='muted';message.textContent='Загружаем услуги…';servicesPanel.append(message);
  try{
  const token=api().getAuth().access_token;
  const [priced,all]=await Promise.all([
@@ -98,17 +102,20 @@ async function clientMaster(master){
  submit.textContent='Заявка отправлена';submit.disabled=true;
  }catch(e){result.textContent='Не удалось отправить заявку: '+e.message;submit.disabled=false}
  };
- section.append(total,labelDate,date,labelTime,time,notice,submit,result);box.append(section);update();
+ section.append(total,labelDate,date,labelTime,time,notice,submit,result);servicesPanel.append(section);update();
  }catch(e){message.textContent='Не удалось открыть услуги: '+e.message}
 }
 function observeCatalog(){
  const box=$('catalog-items');if(!box)return;
  const observer=new MutationObserver(()=>{
- for(const card of box.querySelectorAll('.item')){if(card.dataset.priceLink)return;const name=card.querySelector('strong');if(!name||card.querySelector('summary'))continue;
- card.dataset.priceLink='1';card.style.cursor='pointer';const button=document.createElement('button');button.className='primary full';button.type='button';button.textContent='Услуги и цены';button.onclick=async()=>{
- const rows=await read('/rest/v1/navo_test_master_catalog?select=*&limit=100',api().getAuth().access_token);
- const match=rows.find(x=>x.display_name===name.textContent);if(match)clientMaster(match);
- };card.onclick=e=>{if(e.target.closest('button'))return;button.click()};card.append(button)}
+ for(const card of box.querySelectorAll('.navo-master-card')){
+ if(card.dataset.priceLink)return;
+ card.dataset.priceLink='1';card.style.cursor='pointer';
+ const open=async()=>{const rows=await read('/rest/v1/navo_test_master_catalog?select=*&limit=100',api().getAuth().access_token);const match=rows.find(x=>String(x.master_id)===String(card.dataset.masterId));if(match)clientMaster(match)};
+ card.addEventListener('click',e=>{if(e.target.closest('button,details,a'))return;open()});
+ card.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target===card){e.preventDefault();open()}});
+ const buttons=card.querySelectorAll('button');for(const button of buttons){button.addEventListener('click',e=>{e.stopImmediatePropagation();e.preventDefault();open()},true)}
+ }
  });observer.observe(box,{childList:true,subtree:false});
 }
 let editReady=false,registerReady=false,latestEdit=[];
