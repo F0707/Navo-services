@@ -27,7 +27,7 @@ function dateTimeControls(initialDate,initialTime){
 }
 const mobileDateCss=document.createElement('style');mobileDateCss.textContent='.navo-date-select,.navo-time-select{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;border:1px solid #9eafa5;border-radius:12px;background:#fff;color:#173f35;font:inherit;font-size:16px;padding:13px;margin:10px 0 15px;appearance:auto}';document.head.append(mobileDateCss);
 async function openMaster(master){
- const box=$('catalog-items');box.replaceChildren();box.append(button('← К списку мастеров',()=>api().catalog()),text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));
+ const box=$('catalog-items');box.replaceChildren();$('catalog')?.classList.add('navo-master-detail-open');box.append(button('← Назад',()=>api().catalog()),text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));
  const status=text('p','Загружаем услуги…');box.append(status);
  try{
  const rows=await get('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc');
