@@ -183,7 +183,7 @@ async function renderClientCards(){
  const feedback=text('p','');
  const save=button('Сохранить новое время',async()=>{try{if(!date.value||!time.value)throw Error('Выберите дату и время');const dt=new Date(date.value+'T'+time.value+':00+05:00');if(!Number.isFinite(dt.getTime()))throw Error('Некорректная дата');save.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'reschedule',p_starts:dt.toISOString()});await clientCards()}catch(e){feedback.textContent='Ошибка: '+e.message;save.disabled=false}});
  form.append(text('p','Новая дата'),date,text('p','Новое время'),time,save,feedback);
- const cancel=button('Отменить запись',async()=>{if(!confirm('Отменить эту запись? Это действие нельзя отменить.'))return;try{cancel.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'cancel'});await clientCards()}catch(e){alert('Ошибка отмены: '+e.message);cancel.disabled=false}});
+ const cancel=button('Отменить запись',async()=>{try{cancel.disabled=true;cancel.textContent='Отменяем запись…';await rpc('navo_manage_booking',{p_booking:b.id,p_action:'cancel'});await clientCards()}catch(e){feedback.textContent='Ошибка отмены: '+e.message;cancel.disabled=false;cancel.textContent='Отменить запись'}});
  cancel.className='secondary full';const changes=document.createElement('div');changes.append(edit,form,cancel);detail.append(navoCompactSection('📅 Перенести или отменить запись',changes))
  }
  if(b.status==='completed'){
