@@ -35,7 +35,7 @@ async function openMaster(master){
  if(!rows.length)return;
  const chosen=new Map(),groups={};for(const x of rows)(groups[x.category]??=[]).push(x);
  const total=text('h3','Итого: 0 сомони');
- const refresh=()=>{const sum=[...chosen.values()].reduce((a,x)=>a+Number(x.price_somoni),0);total.textContent='Итого: '+sum.toFixed(2)+' сомони'};
+ const refresh=()=>{const sum=[...chosen.values()].reduce((a,x)=>a+Number(x.price_somoni),0);total.textContent='Итого: '+sum.toFixed(2)+' сомони';if(typeof checkSlot==='function')checkSlot()};
  for(const [category,items] of Object.entries(groups)){
  const group=document.createElement('details');group.className='item';group.open=true;const title=text('summary',category+' ('+items.length+')');title.style.cssText='font-weight:700;cursor:pointer;padding:10px 0';group.append(title);
  for(const item of items){const line=document.createElement('label');line.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 0;font-weight:400';
@@ -56,7 +56,15 @@ async function openMaster(master){
  box.append(button('Перейти в мои записи',()=>{api().show('bookings');api().bookings()}));
  }catch(e){result.textContent='Ошибка: '+e.message;submit.disabled=false}
  });
- box.append(date,time,note,submit,result);
+ const availability=text('p','');let checkSeq=0;
+ const checkSlot=async()=>{const seq=++checkSeq;if(!chosen.size){availability.textContent='Выберите услуги, чтобы проверить время';submit.disabled=false;return}
+ availability.textContent='Проверяем свободное время…';submit.disabled=true;
+ try{const dt=new Date(date.value+'T'+time.value+':00+05:00');const ok=await rpc('navo_slot_available',{p_master:master.master_id,p_starts:dt.toISOString(),p_minutes:chosen.size*30,p_exclude:null});if(seq!==checkSeq)return;
+ availability.textContent=ok?'✓ Время свободно. Запись подтвердится автоматически.':'Это время занято или вне графика мастера. Выберите другое.';submit.disabled=!ok
+ }catch(e){if(seq===checkSeq){availability.textContent='Не удалось проверить время: '+e.message;submit.disabled=true}}};
+ date.onchange=checkSlot;time.onchange=checkSlot;
+ box.append(date,time,note,availability,submit,result);
+ checkSlot();
  }catch(e){status.textContent='Ошибка загрузки услуг: '+e.message}
 }
 async function attachMasterCards(){
