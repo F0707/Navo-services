@@ -201,6 +201,20 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const dot=document.createElement('span');dot.className='navo-chat-dot';dot.dataset.chatUnread='1';dot.hidden=true;dot.textContent='1';
  summary.append(glyph,title,dot);details.append(summary,wrap);
  let chatPlaceholder=null;
+ const setFixed=(element,styles)=>{for(const [key,value] of Object.entries(styles))element.style.setProperty(key,value,'important')};
+ const layoutChat=()=>{
+  if(!details.open)return;
+  const viewport=window.visualViewport;
+  const height=Math.round(viewport?.height||window.innerHeight);
+  const top=Math.round(viewport?.offsetTop||0);
+  setFixed(details,{position:'fixed',top:top+'px',left:'0px',right:'0px',bottom:'auto',height:height+'px','max-height':height+'px',width:'100%','overflow':'hidden','z-index':'2147483000'});
+  setFixed(wrap,{position:'absolute',inset:'0',height:'100%',width:'100%',display:'flex','flex-direction':'column','min-height':'0','overflow':'hidden',margin:'0',padding:'0'});
+  setFixed(head,{position:'relative',top:'auto',bottom:'auto',height:'auto','max-height':'none','flex':'0 0 auto'});
+  setFixed(messages,{position:'relative',top:'auto',bottom:'auto',left:'auto',right:'auto',height:'auto','max-height':'none','min-height':'0','flex':'1 1 0','overflow-y':'auto','overflow-x':'hidden'});
+  setFixed(status,{display:'none'});
+  setFixed(quick,{position:'relative',top:'auto',bottom:'auto',height:'auto','max-height':'54px','flex':'0 0 auto'});
+  setFixed(composer,{position:'relative',top:'auto',bottom:'auto',height:'auto','max-height':'none','min-height':'64px','flex':'0 0 auto'});
+ };
  const closeChat=()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)};
  back.onclick=closeChat;
  details.addEventListener('toggle',()=>{
@@ -209,11 +223,20 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
    document.body.append(details);
    details.classList.add('navo-chat-fullscreen');
    document.body.classList.add('navo-chat-screen-open');
+   layoutChat();
+   window.addEventListener('resize',layoutChat);
+   window.visualViewport?.addEventListener('resize',layoutChat);
+   window.visualViewport?.addEventListener('scroll',layoutChat);
    refresh();
-   requestAnimationFrame(()=>{messages.scrollTop=messages.scrollHeight});
+   requestAnimationFrame(()=>{layoutChat();messages.scrollTop=messages.scrollHeight});
   }else{
+   window.removeEventListener('resize',layoutChat);
+   window.visualViewport?.removeEventListener('resize',layoutChat);
+   window.visualViewport?.removeEventListener('scroll',layoutChat);
    details.classList.remove('navo-chat-fullscreen');
    document.body.classList.remove('navo-chat-screen-open');
+   for(const element of [details,wrap,head,messages,status,quick,composer])element.removeAttribute('style');
+   wrap.style.marginTop='10px';wrap.style.background='transparent';
    if(chatPlaceholder?.parentNode){chatPlaceholder.replaceWith(details);chatPlaceholder=null}
   }
  });
