@@ -275,13 +275,10 @@ async function renderClientCards(){
  const rawRows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');const rows=[...new Map(rawRows.map(b=>[b.id,b])).values()];
  box.dataset.bookingFingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));box.replaceChildren();if(!rows.length){navoFocusedBookingId=null;box.append(text('p','У вас пока нет записей'));return}
  const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
- const bookingData=await Promise.all(rows.map(async b=>{
-  const [items,code]=await Promise.all([
-   get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id).catch(()=>[]),
-   b.status!=='completed'&&b.status!=='cancelled'?rpc('navo_get_booking_code',{p_booking:b.id}).catch(()=>null):Promise.resolve(null)
-  ]);
-  return {items,code};
- }));
+ const bookingData=rows.map(b=>Promise.all([
+  get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id).catch(()=>[]),
+  b.status!=='completed'&&b.status!=='cancelled'?rpc('navo_get_booking_code',{p_booking:b.id}).catch(()=>null):Promise.resolve(null)
+ ]).then(([items,code])=>({items,code})));
  for(const [bookingIndex,b] of rows.entries()){
  const card=document.createElement('div');card.className='item navo-booking-tile bg-white rounded-2xl p-4 border-2 border-emerald-600/20 shadow-sm space-y-3 mb-3';card.dataset.bookingCard=b.id;
  const master=masterMap.get(b.master_id);const title=text('strong',master?.display_name?'Мастер: '+master.display_name:'Мастер NAVO');const status=text('span',({completed:'Завершена',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status));status.className='navo-booking-status navo-status-'+b.status;
@@ -289,9 +286,22 @@ async function renderClientCards(){
  const toggle=button('Открыть запись',()=>{const opening=detail.hidden;navoSetBookingFocus(opening?b.id:null);});toggle.className='secondary navo-client-booking-open';detail.className='navo-client-booking-details';card.append(toggle,detail);
  if(master?.photo_url){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото мастера';photo.style.cssText='width:48px;height:48px;object-fit:cover;border-radius:10px;float:right;margin:0 0 6px 8px';detail.append(photo)}
  const info=document.createElement('div');info.className='navo-client-info-grid';info.append(text('p','📍 '+([master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес не указан')),text('p','🕒 '+dateText(b.starts_at)));detail.append(info,text('h4','Услуги и стоимость'));
- const {items,code:cachedCode}=bookingData[bookingIndex];
- const serviceLine=text('p',items.length?items.map(x=>x.service_name+' · '+x.price_somoni+' сом').join(' / '):'Список услуг не сохранён');serviceLine.className='navo-booking-services';card.append(serviceLine);detail.append(text('p','Итого: '+b.total_somoni+' сомони'));const chat=chatPanel(b.id,user.id,token(),b.status!=='cancelled','client',{name:master?.display_name||'Мастер NAVO',service:items.map(x=>x.service_name+' — '+x.price_somoni+' сом').join(', '),date:dateText(b.starts_at),phone:master?.phone,photo:master?.photo_url});detail.append(chat);
- if(b.status!=='completed'&&b.status!=='cancelled'){try{const code=cachedCode;if(code){const codeBox=document.createElement('div');codeBox.className='item';codeBox.style.textAlign='center';const caption=text('p','Код подтверждения обслуживания');const digits=text('h2',String(code).padStart(4,'0'));digits.className='navo-ticket-digits';digits.textContent=String(code).padStart(4,'0').split('').join(' ');codeBox.append(caption,digits,text('p','После окончания обслуживания сообщите эти 4 цифры мастеру. Мастер введёт код, чтобы завершить запись.'));codeBox.classList.add('navo-code-ticket');codeBox.querySelector('p:last-child').textContent='Покажите этот код мастеру после стрижки или другой услуги.';detail.append(codeBox)}}catch(e){}}
+ const items=[];let cachedCode=null;
+ const serviceLine=text('p','Услуги: '+Number(b.total_somoni||0)+' сом');serviceLine.className='navo-booking-services';card.append(serviceLine);detail.append(text('p','Итого: '+b.total_somoni+' сомони'));const chat=chatPanel(b.id,user.id,token(),b.status!=='cancelled','client',{name:master?.display_name||'Мастер NAVO',service:items.map(x=>x.service_name+' — '+x.price_somoni+' сом').join(', '),date:dateText(b.starts_at),phone:master?.phone,photo:master?.photo_url});detail.append(chat);
+ let codeBox=null;
+ if(b.status!=='completed'&&b.status!=='cancelled'){
+  codeBox=document.createElement('div');codeBox.className='item navo-code-ticket';codeBox.style.textAlign='center';
+  codeBox.append(text('p','Код подтверждения обслуживания'),text('h2','••••'),text('p','Покажите код мастеру после выполнения услуги.'));
+  detail.append(codeBox);
+ }
+ bookingData[bookingIndex].then(({items:loadedItems,code})=>{
+  if(!card.isConnected)return;
+  const service=loadedItems.length?loadedItems.map(x=>x.service_name+' · '+x.price_somoni+' сом').join(' / '):'Услуги не указаны';
+  serviceLine.textContent=service;
+  const subtitle=chat.querySelector('.navo-messenger-subtitle');
+  if(subtitle)subtitle.textContent=[loadedItems.map(x=>x.service_name+' — '+x.price_somoni+' сом').join(', '),dateText(b.starts_at)].filter(Boolean).join(' · ');
+  if(codeBox){if(code){const digits=codeBox.querySelector('h2');digits.className='navo-ticket-digits';digits.textContent=String(code).padStart(4,'0').split('').join(' ')}else codeBox.querySelector('h2').textContent='Код недоступен'}
+ }).catch(console.warn);
  if(['requested','confirmed'].includes(b.status)){
  const edit=button('Перенести запись',()=>{form.hidden=!form.hidden});const form=document.createElement('div');form.hidden=true;
  const currentDate=new Date(b.starts_at);const fmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(currentDate).replace(' ','T');
