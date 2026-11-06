@@ -235,7 +235,7 @@ async function renderClientCards(){
  }}
  box.append(card)
  }
- updateBookingUnread().catch(console.error)
+ // Chat messages are fetched only after opening a conversation.
 }
 let masterRenderRunning=false,masterRenderQueued=false;
 async function masterCards(){
@@ -295,5 +295,5 @@ async function setupMasterSchedule(){
  const data=rows[0]||{working_days:[1,2,3,4,5,6,7],start_time:'09:00',end_time:'20:00'};
  const {checks,start,end}=area._scheduleFields;for(const cb of checks)cb.checked=data.working_days.includes(Number(cb.value));start.value=data.start_time.slice(0,5);end.value=data.end_time.slice(0,5);
 }
-document.addEventListener('DOMContentLoaded',()=>{setInterval(()=>updateBookingUnread().catch(console.error),15000);attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>clientCards().catch(console.error));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>{setTimeout(()=>masterCards().catch(console.error),200);setupMasterSchedule().catch(console.error)});window.addEventListener('navo-master-bookings-loaded',()=>{masterCards().catch(console.error);setupMasterSchedule().catch(console.error)});});
+document.addEventListener('DOMContentLoaded',()=>{setInterval(()=>{if(document.querySelector('.navo-chat[open]')||!$('ml-dashboard')?.classList.contains('hide'))updateBookingUnread().catch(console.error)},15000);attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>clientCards().catch(console.error));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>{setTimeout(()=>masterCards().catch(console.error),200);setupMasterSchedule().catch(console.error)});window.addEventListener('navo-master-bookings-loaded',()=>{masterCards().catch(console.error);setupMasterSchedule().catch(console.error)});});
 })();
