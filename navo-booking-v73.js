@@ -245,6 +245,7 @@ async function clientCards(force=false){
  if(cachedBookingUser!==uid){cachedBookings=null;cachedBookingUser=uid;navoFocusedBookingId=null;if(box)box.replaceChildren()}
  if(cachedBookings&&!force){
   navoSetBookingFocus(null);
+  if(box&&box.childElementCount)box.style.visibility='visible';
   if(status)status.textContent='';
   // Existing DOM is the in-memory cache: no blocking Supabase call or redraw.
   get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(uid)+'&order=starts_at.desc&limit=100')
@@ -269,12 +270,14 @@ function navoCompactSection(title,child,open=false){
  const summary=document.createElement('summary');summary.textContent=title;
  section.append(summary,child);return section;
 }
+let cachedMasterDirectory=null,cachedMasterDirectoryAt=0;
 async function renderClientCards(){
  const box=$('bookings-items');if(!box)return;
  const user=api().getAuth()?.user;if(!user)return;
+ const directoryPromise=cachedMasterDirectory&&Date.now()-cachedMasterDirectoryAt<300000?Promise.resolve(cachedMasterDirectory):get('/rest/v1/navo_test_master_catalog?select=*&limit=100').then(data=>{cachedMasterDirectory=data;cachedMasterDirectoryAt=Date.now();return data}).catch(()=>cachedMasterDirectory||[]);
  const rawRows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');const rows=[...new Map(rawRows.map(b=>[b.id,b])).values()];
  box.dataset.bookingFingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));box.replaceChildren();if(!rows.length){navoFocusedBookingId=null;box.append(text('p','У вас пока нет записей'));return}
- const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100').catch(()=>[]);const masterMap=new Map(masters.map(m=>[m.master_id,m]));
+ const masters=await directoryPromise;const masterMap=new Map(masters.map(m=>[m.master_id,m]));
  const bookingData=rows.map(b=>Promise.all([
   get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id).catch(()=>[]),
   b.status!=='completed'&&b.status!=='cancelled'?rpc('navo_get_booking_code',{p_booking:b.id}).catch(()=>null):Promise.resolve(null)
