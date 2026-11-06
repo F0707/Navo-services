@@ -1172,24 +1172,28 @@ function navoProfileCards(){
 try{navoProfileCards()}catch(error){console.error('NAVO profile layout initialization',error)}
 function navoMasterLayout(){
  const root=el('ml-dashboard');if(!root||el('masterView'))return;
-  const home=document.createElement('section');home.id='masterHomeTab';
+ const home=document.createElement('div');home.id='masterHomeTab';home.className='p-4 space-y-4 max-w-md mx-auto bg-gray-50/50 min-h-screen pb-24';
+ home.innerHTML=`<div class="flex items-center justify-between pt-1"><div class="flex items-center space-x-1.5"><span class="text-2xl font-black text-emerald-800 tracking-tight">NAVO</span><span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">PRO</span></div><button id="btnMasterViewAsClient" class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-3 py-1.5 rounded-full shadow-xs flex items-center space-x-1 transition"><span>👁 Как видит клиент</span></button></div>
+ <div class="bg-white rounded-3xl p-4 border border-gray-100 shadow-xs flex items-center space-x-3.5"><div class="relative"><img id="mAvatarImg" alt="Фото мастера" class="w-14 h-14 rounded-full object-cover border-2 border-emerald-600"><span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span></div><div><div class="flex items-center space-x-2"><h2 id="mMasterName" class="text-base font-bold text-gray-900"></h2><span id="mMasterStatus" class="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">На проверке</span></div><p id="mMasterRating" class="text-xs text-amber-500 font-semibold mt-0.5">★ — <span class="text-gray-400 font-normal">(0 отзывов)</span></p><p id="mMasterAddress" class="text-[11px] text-gray-500 mt-0.5"></p></div></div>
+ <div class="grid grid-cols-3 gap-2.5"><div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-xs text-center"><span class="text-xs text-gray-400 block">📅 Записи</span><span class="text-lg font-black text-gray-900 mt-0.5 block" id="mTodayCount">0</span></div><div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-xs text-center"><span class="text-xs text-gray-400 block">💬 Чаты</span><span class="text-lg font-black text-gray-900 mt-0.5 block" id="mChatsCount">—</span></div><div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-xs text-center"><span class="text-xs text-gray-400 block">👛 Баланс</span><span class="text-lg font-black text-emerald-700 mt-0.5 block" id="mBalance">— <span class="text-[10px] font-normal text-gray-500">TJS</span></span></div></div>
+ <div class="space-y-2.5"><div class="flex items-center justify-between px-1"><h3 class="text-sm font-bold text-gray-900">Ближайшие записи на сегодня</h3><span id="mAllBookings" class="text-xs text-emerald-700 font-semibold cursor-pointer">Все ›</span></div><div id="mTodayBookingsList" class="space-y-2.5"></div></div>
+ <button id="btnAddNewBooking" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-2xl shadow-sm text-xs transition flex items-center justify-center space-x-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span>+ Новая запись</span></button>`;
  const bookings=document.createElement('section');bookings.id='masterBookingsTab';bookings.className='hide';
  const chats=document.createElement('section');chats.id='masterChatsTab';chats.className='hide';
  const profile=document.createElement('section');profile.id='masterProfileTab';profile.className='hide';
- const head=root.querySelector('.navo-master-head'),preview=el('md-general-view'),metrics=root.querySelector('.navo-master-metrics');
- for(const node of [head,preview,metrics,el('md-home')])if(node)home.append(node);
  for(const node of [el('navo-bookings-segments'),el('md-today'),el('md-upcoming')])if(node)bookings.append(node);
  const chatTitle=document.createElement('h3');chatTitle.textContent='Диалоги с клиентами';chats.append(chatTitle);
- const inbox=el('md-inbox');if(inbox)chats.append(inbox);
- profile.append(el('md-profile'));
- for(const panel of [home,bookings,chats,profile])root.append(panel);
+ if(el('md-inbox'))chats.append(el('md-inbox'));if(el('md-profile'))profile.append(el('md-profile'));
  const wrap=document.createElement('div');wrap.id='masterView';wrap.className='navo-master-layout';
- for(const panel of [home,bookings,chats,profile])wrap.append(panel);
+ for(const panel of [home,bookings,chats,profile]){panel.dataset.view=panel.id==='masterHomeTab'?'home':panel.id==='masterBookingsTab'?'bookings':panel.id==='masterChatsTab'?'chats':'profile';wrap.append(panel)}
  root.append(wrap);
- for(const [id,view] of [['masterHomeTab','home'],['masterBookingsTab','bookings'],['masterChatsTab','chats'],['masterProfileTab','profile']])el(id).dataset.view=view;
- const legacy=el('md-tab-profile');if(legacy)legacy.classList.add('navo-legacy-master-tab');
- const legacyUpcoming=el('md-tab-upcoming');if(legacyUpcoming)legacyUpcoming.classList.add('navo-legacy-master-tab');
- const legacyToday=el('md-tab-today');if(legacyToday)legacyToday.classList.add('navo-legacy-master-tab');
+ const nav=document.createElement('nav');nav.id='masterBottomNav';nav.className='fixed bottom-0 max-w-md w-full bg-white/95 backdrop-blur-md border-t border-gray-200 grid grid-cols-4 py-2 z-40 shadow-lg';nav.hidden=true;
+ const icons={home:'<path d="M3 12l9-9 9 9M5 10v11h5v-7h4v7h5V10"/>',bookings:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 11h18"/>',chats:'<path d="M21 12c0 5-4 8-9 8a10 10 0 0 1-4-1l-5 1 1-4a8 8 0 1 1 17-4z"/>',profile:'<circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>'};
+ for(const [key,label] of [['home','Главная'],['bookings','Записи'],['chats','Чаты'],['profile','Профиль']]){const b=document.createElement('button');b.className='flex flex-col items-center justify-center text-gray-400 hover:text-gray-600';b.dataset.view=key;b.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icons[key]+'</svg><span class="text-[10px] font-medium mt-1">'+label+'</span>';b.onclick=()=>navoMasterView(key);nav.append(b)}
+ document.body.append(nav);window.switchMasterTab=navoMasterView;
+ el('btnMasterViewAsClient').onclick=()=>el('md-general-view')?.click();
+ el('mAllBookings').onclick=()=>navoMasterView('bookings');
+ el('btnAddNewBooking').onclick=()=>el('navo-master-new-booking')?.click();
 }
 try{navoMasterLayout()}catch(error){console.error('NAVO master layout initialization',error)}
 function navoMasterView(view){
@@ -1199,30 +1203,44 @@ function navoMasterView(view){
  el('ml-dashboard').dataset.masterView=view;
  if(view==='bookings')navoBookingPeriod(navoBookingSelectedPeriod);
  if(view==='chats'){const inbox=el('md-inbox');if(inbox&&inbox.parentElement!==el('masterChatsTab'))el('masterChatsTab').append(inbox);window.dispatchEvent(new Event('navo-master-open'));}
- navoMasterNav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+ el('masterBottomNav')?.querySelectorAll('button').forEach(b=>{b.classList.toggle('text-emerald-700',b.dataset.view===view);b.classList.toggle('text-gray-400',b.dataset.view!==view)});
  if(view==='chats'){const inbox=el('md-inbox');if(inbox)inbox.classList.remove('hide');}
  if(view==='bookings'){window.dispatchEvent(new Event('navo-master-bookings-loaded'));}
  if(view==='home')navoLoadMasterOverview().catch(console.warn);
 }
 async function navoLoadMasterOverview(){
  if(!masterSession?.user?.id||!masterProfile)return;
- const p=masterProfile;el('navo-master-name').textContent=p.full_name||'Мастер';el('navo-master-status').textContent=p.status==='approved'?'Подтверждён':p.status==='rejected'?'Отклонён':'На проверке';
- const avatar=el('navo-master-avatar');avatar.replaceChildren();if(p.photo_url){const img=document.createElement('img');img.src=p.photo_url;img.alt='Фото мастера';avatar.append(img)}else avatar.textContent=(p.full_name||'М').slice(0,1).toUpperCase();
- const startOfDay=new Date(Date.now()-3*86400000).toISOString();
- const rows=await request('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(masterSession.user.id)+'&starts_at=gte.'+encodeURIComponent(startOfDay)+'&order=starts_at.asc&limit=200',null,masterSession.access_token,'GET');
+ const p=masterProfile;
+ el('mMasterName').textContent=p.full_name||'Мастер';
+ el('mMasterStatus').textContent=p.status==='approved'?'Подтверждён':p.status==='rejected'?'Отклонён':'На проверке';
+ el('mMasterAddress').textContent=p.work_address?'📍 '+[p.city,p.work_address].filter(Boolean).join(', '):'';
+ const avatar=el('mAvatarImg');if(p.photo_url){avatar.src=p.photo_url;avatar.hidden=false}else{avatar.removeAttribute('src');avatar.hidden=true}
+ const start=new Date(Date.now()-3*86400000).toISOString();
+ const rows=await request('/rest/v1/bookings?select=id,starts_at,status,client_phone,total_somoni&master_id=eq.'+encodeURIComponent(masterSession.user.id)+'&starts_at=gte.'+encodeURIComponent(start)+'&order=starts_at.asc&limit=200',null,masterSession.access_token,'GET');
  const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- el('navo-metric-today').textContent=rows.filter(x=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(x.starts_at))===day).length;
- const box=el('navo-master-nearest');box.replaceChildren();
- for(const b of rows.filter(x=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(x.starts_at))===day&&!['cancelled','canceled'].includes(x.status)).slice(0,5)){
- const item=document.createElement('div');item.className='navo-master-near-row';const d=document.createElement('div');d.className='navo-near-info';const top=document.createElement('div');top.className='navo-near-top';const strong=document.createElement('strong');strong.textContent=new Date(b.starts_at).toLocaleTimeString('ru-RU',{timeZone:'Asia/Dushanbe',hour:'2-digit',minute:'2-digit'});const name=document.createElement('span');name.className='navo-near-client';name.textContent=b.client_phone||'Клиент';top.append(strong,name);const desc=document.createElement('small');desc.textContent=(b.total_somoni??'—')+' TJS';const badge=document.createElement('span');badge.className='navo-master-booking-status';badge.textContent=b.status==='confirmed'?'Подтверждена':b.status==='completed'?'Завершена':'Ожидает';d.append(top,desc,badge);
- const actions=document.createElement('div');actions.className='navo-master-near-actions';const chat=document.createElement('button');chat.type='button';chat.textContent='💬 Чат';chat.onclick=()=>{navoMasterView('chats');setTimeout(()=>{const card=el('md-inbox-list')?.querySelector('[data-booking-id="'+String(b.id)+'"]');card?.scrollIntoView({behavior:'smooth',block:'center'});card?.querySelector('.navo-thread-toggle,details summary')?.click()},450)};const complete=document.createElement('button');complete.type='button';complete.textContent='Завершить заказ';complete.onclick=()=>{navoMasterView('bookings');navoBookingPeriod('today');const card=el('md-today-list')?.querySelector('[data-booking-id="'+String(b.id)+'"]');if(card){card.scrollIntoView({behavior:'smooth',block:'center'});const pin=card.querySelector('input[inputmode="numeric"],input[maxlength="4"]');if(pin)pin.focus()}else mstatus('md-today-status','Для завершения заказа откройте запись и введите PIN клиента.')};actions.append(chat,complete);item.append(d,actions);box.append(item)
- }if(!box.childElementCount)box.textContent='Ближайших записей пока нет.';
+ const todays=rows.filter(b=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(b.starts_at))===day&&!['cancelled','canceled'].includes(b.status));
+ el('mTodayCount').textContent=todays.length;
+ const box=el('mTodayBookingsList');box.replaceChildren();
+ for(const b of todays.slice(0,5)){
+ const card=document.createElement('div');card.className='bg-white p-3.5 rounded-2xl border border-gray-100 shadow-xs space-y-2.5';
+ const top=document.createElement('div');top.className='flex items-center justify-between';const info=document.createElement('div');info.className='flex items-center space-x-2';
+ const time=document.createElement('span');time.className='text-sm font-black text-gray-900';time.textContent=new Date(b.starts_at).toLocaleTimeString('ru-RU',{timeZone:'Asia/Dushanbe',hour:'2-digit',minute:'2-digit'});
+ const client=document.createElement('span');client.className='text-xs font-bold text-gray-800';client.textContent='Клиент';
+ const phone=document.createElement('span');phone.className='text-[11px] text-gray-400 font-mono';phone.textContent=b.client_phone||'';
+ info.append(time,client,phone);const status=document.createElement('span');status.className='text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full';status.textContent=b.status==='confirmed'?'Подтверждена':b.status==='completed'?'Завершена':'Ожидает';top.append(info,status);
+ const detail=document.createElement('div');detail.className='text-xs text-gray-500';const price=document.createElement('strong');price.className='text-gray-900';price.textContent=(b.total_somoni??'—')+' TJS';detail.append(price);
+ const actions=document.createElement('div');actions.className='grid grid-cols-2 gap-2 pt-1 border-t border-gray-50';
+ const chat=document.createElement('button');chat.className='py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 transition';chat.textContent='💬 Чат';chat.onclick=()=>{navoMasterView('chats');setTimeout(()=>{const item=el('md-inbox-list')?.querySelector('[data-booking-id="'+String(b.id)+'"]');item?.scrollIntoView({block:'center'});item?.querySelector('.navo-thread-toggle,details summary')?.click()},450)};
+ const done=document.createElement('button');done.className='py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center space-x-1 border border-emerald-200/60 transition';done.textContent='✓ Завершить';done.onclick=()=>{navoMasterView('bookings');navoBookingPeriod('today');const item=el('md-today-list')?.querySelector('[data-booking-id="'+String(b.id)+'"]');item?.scrollIntoView({block:'center'});item?.querySelector('input[inputmode="numeric"],input[maxlength="4"]')?.focus()};
+ actions.append(chat,done);card.append(top,detail,actions);box.append(card);
+ }
+ if(!box.childElementCount)box.textContent='Ближайших записей пока нет.';
 }
 el('navo-master-logout').onclick=async()=>{
  const token=masterSession?.access_token||auth?.access_token;
  try{if(token)await request('/auth/v1/logout',null,token,'POST')}catch(e){console.warn('Logout:',e.message)}
  masterSession=null;masterProfile=null;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);sessionStorage.removeItem('master_authenticated');sessionStorage.removeItem('navo-view-mode');
- el('ml-dashboard').classList.add('hide');navoMasterNav.hidden=true;navoPreviewBar.hidden=true;el('master-login').classList.remove('navo-login-modal');
+ el('ml-dashboard').classList.add('hide');navoMasterNav.hidden=true;if(el('masterBottomNav'))el('masterBottomNav').hidden=true;navoPreviewBar.hidden=true;el('master-login').classList.remove('navo-login-modal');
  el('inside').classList.remove('hide','navo-master-view');el('login').classList.add('hide');show('catalog');catalog().catch(console.warn);
 };
 el('navo-master-new-booking').onclick=()=>{navoMasterView('bookings');const status=el('md-today-status');if(status)status.textContent='Для ручной записи используйте расписание мастера.'};
@@ -1521,4 +1539,18 @@ window.addEventListener('navo-master-open',()=>setTimeout(refreshNavoFees,350));
 #ml-dashboard .navo-master-metrics strong{font-size:18px!important}
 #ml-dashboard .navo-master-metrics small{font-size:11px!important}
 #ml-dashboard #md-home h3{font-size:17px!important}
+</style><style id="navo-master-utility-base">
+#masterHomeTab{max-width:448px;margin:0 auto;padding:16px 16px 96px;background:#f9fafb;min-height:100dvh;color:#111827;font-family:system-ui,sans-serif}
+#masterHomeTab .flex{display:flex}#masterHomeTab .grid{display:grid}#masterHomeTab .grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}#masterHomeTab .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}#masterHomeTab .items-center{align-items:center}#masterHomeTab .justify-between{justify-content:space-between}#masterHomeTab .justify-center{justify-content:center}#masterHomeTab .text-center{text-align:center}#masterHomeTab .block{display:block}#masterHomeTab .relative{position:relative}#masterHomeTab .absolute{position:absolute}#masterHomeTab .bottom-0{bottom:0}#masterHomeTab .right-0{right:0}
+#masterHomeTab .space-y-4>*+*{margin-top:16px}#masterHomeTab .space-y-2\.5>*+*{margin-top:10px}#masterHomeTab .space-x-2>*+*{margin-left:8px}#masterHomeTab .space-x-3\.5>*+*{margin-left:14px}#masterHomeTab .space-x-1\.5>*+*{margin-left:6px}#masterHomeTab .gap-2\.5{gap:10px}#masterHomeTab .gap-2{gap:8px}
+#masterHomeTab .bg-white{background:#fff}#masterHomeTab .bg-gray-50{background:#f9fafb}#masterHomeTab .bg-emerald-700{background:#047857}#masterHomeTab .bg-emerald-50{background:#ecfdf5}#masterHomeTab .bg-emerald-100{background:#d1fae5}#masterHomeTab .bg-amber-100{background:#fef3c7}
+#masterHomeTab .rounded-3xl{border-radius:24px}#masterHomeTab .rounded-2xl{border-radius:16px}#masterHomeTab .rounded-xl{border-radius:12px}#masterHomeTab .rounded-full{border-radius:999px}#masterHomeTab .rounded{border-radius:4px}
+#masterHomeTab .p-4{padding:16px}#masterHomeTab .p-3{padding:12px}#masterHomeTab .p-3\.5{padding:14px}#masterHomeTab .px-3{padding-left:12px;padding-right:12px}#masterHomeTab .px-2{padding-left:8px;padding-right:8px}#masterHomeTab .px-1{padding-left:4px;padding-right:4px}#masterHomeTab .py-2{padding-top:8px;padding-bottom:8px}#masterHomeTab .py-3\.5{padding-top:14px;padding-bottom:14px}#masterHomeTab .py-1\.5{padding-top:6px;padding-bottom:6px}#masterHomeTab .py-0\.5{padding-top:2px;padding-bottom:2px}#masterHomeTab .pt-1{padding-top:4px}
+#masterHomeTab .border{border:1px solid #e5e7eb}#masterHomeTab .border-t{border-top:1px solid #f3f4f6}#masterHomeTab .border-2{border:2px solid #059669}#masterHomeTab .shadow-xs,#masterHomeTab .shadow-sm{box-shadow:0 2px 9px #0000000c}
+#masterHomeTab .w-full{width:100%}#masterHomeTab .w-14{width:56px}#masterHomeTab .h-14{height:56px}#masterHomeTab .w-3\.5{width:14px}#masterHomeTab .h-3\.5{height:14px}#masterHomeTab .w-4{width:16px}#masterHomeTab .h-4{height:16px}#masterHomeTab .object-cover{object-fit:cover}
+#masterHomeTab .text-2xl{font-size:24px}#masterHomeTab .text-lg{font-size:18px}#masterHomeTab .text-base{font-size:16px}#masterHomeTab .text-sm{font-size:14px}#masterHomeTab .text-xs{font-size:12px}#masterHomeTab .text-\[10px\]{font-size:10px}#masterHomeTab .text-\[11px\]{font-size:11px}
+#masterHomeTab .font-black{font-weight:900}#masterHomeTab .font-bold{font-weight:700}#masterHomeTab .font-semibold{font-weight:600}#masterHomeTab .font-medium{font-weight:500}#masterHomeTab .text-gray-900{color:#111827}#masterHomeTab .text-gray-800{color:#1f2937}#masterHomeTab .text-gray-700{color:#374151}#masterHomeTab .text-gray-500{color:#6b7280}#masterHomeTab .text-gray-400{color:#9ca3af}#masterHomeTab .text-emerald-800{color:#065f46}#masterHomeTab .text-emerald-700{color:#047857}#masterHomeTab .text-amber-800{color:#92400e}#masterHomeTab .text-amber-500{color:#f59e0b}#masterHomeTab .text-white{color:white}
+#masterHomeTab button{width:auto;min-height:unset;margin:0;line-height:1.35;cursor:pointer}#masterHomeTab #btnAddNewBooking{width:100%}#masterHomeTab .mt-0\.5{margin-top:2px}#masterHomeTab .mt-1{margin-top:4px}
+#masterBottomNav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:448px;display:grid;grid-template-columns:repeat(4,1fr);background:#fffffff2;border-top:1px solid #e5e7eb;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:12001;box-shadow:0 -2px 12px #0001}#masterBottomNav[hidden]{display:none!important}#masterBottomNav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;font-size:10px;padding:4px;color:#9ca3af}#masterBottomNav button.text-emerald-700{color:#047857}#masterBottomNav svg{width:20px;height:20px}
+#navo-master-bottom-nav{display:none!important}#ml-dashboard .navo-master-topline,#ml-dashboard>.navo-master-head,#ml-dashboard>.navo-master-metrics,#ml-dashboard>#md-home,#ml-dashboard>#md-general-view{display:none!important}
 </style></body></html>
