@@ -201,7 +201,7 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const dot=document.createElement('span');dot.className='navo-chat-dot';dot.dataset.chatUnread='1';dot.hidden=true;dot.textContent='1';
  summary.append(glyph,title,dot);details.append(summary,wrap);
  let chatPlaceholder=null;
- const closeChat=()=>{details.open=false};
+ const closeChat=()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)};
  back.onclick=closeChat;
  details.addEventListener('toggle',()=>{
   if(details.open){
@@ -233,7 +233,7 @@ function navoSetBookingFocus(id){
   const d=tile.querySelector('.navo-client-booking-details');if(d)d.hidden=!active;
   const btn=tile.querySelector('.navo-client-booking-open');if(btn)btn.textContent=active?'← К списку записей':'Открыть запись';
  }
- if(!id){document.body.classList.remove('navo-chat-screen-open');for(const chat of document.querySelectorAll('details.navo-chat[open]'))chat.open=false}
+ if(!id){for(const chat of document.querySelectorAll('details.navo-chat[open]'))chat.open=false;document.body.classList.remove('navo-chat-screen-open')}
 }
 window.navoShowAllBookings=()=>navoSetBookingFocus(null);
 
@@ -274,7 +274,7 @@ async function renderClientCards(){
  const user=api().getAuth()?.user;if(!user)return;
  const rawRows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');const rows=[...new Map(rawRows.map(b=>[b.id,b])).values()];
  box.dataset.bookingFingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));box.replaceChildren();if(!rows.length){navoFocusedBookingId=null;box.append(text('p','У вас пока нет записей'));return}
- const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
+ const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100').catch(()=>[]);const masterMap=new Map(masters.map(m=>[m.master_id,m]));
  const bookingData=rows.map(b=>Promise.all([
   get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id).catch(()=>[]),
   b.status!=='completed'&&b.status!=='cancelled'?rpc('navo_get_booking_code',{p_booking:b.id}).catch(()=>null):Promise.resolve(null)
@@ -284,6 +284,8 @@ async function renderClientCards(){
  const master=masterMap.get(b.master_id);const title=text('strong',master?.display_name?'Мастер: '+master.display_name:'Мастер NAVO');const status=text('span',({completed:'Завершена',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status));status.className='navo-booking-status navo-status-'+b.status;
  const detail=document.createElement('div');detail.hidden=true;const appointmentDate=navoTimeBadge(b.starts_at);const top=document.createElement('div');top.className='navo-client-booking-top';top.append(appointmentDate,status);card.append(top,title);const address=text('p',[master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес уточняется');address.className='navo-booking-address';card.append(address);
  const toggle=button('Открыть запись',()=>{const opening=detail.hidden;navoSetBookingFocus(opening?b.id:null);});toggle.className='secondary navo-client-booking-open';detail.className='navo-client-booking-details';card.append(toggle,detail);
+ card.addEventListener('click',event=>{if(event.target.closest('button,a,input,select,textarea,label,details,summary'))return;if(detail.hidden)navoSetBookingFocus(b.id)});
+
  if(master?.photo_url){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото мастера';photo.style.cssText='width:48px;height:48px;object-fit:cover;border-radius:10px;float:right;margin:0 0 6px 8px';detail.append(photo)}
  const info=document.createElement('div');info.className='navo-client-info-grid';info.append(text('p','📍 '+([master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес не указан')),text('p','🕒 '+dateText(b.starts_at)));detail.append(info,text('h4','Услуги и стоимость'));
  const items=[];let cachedCode=null;
