@@ -188,7 +188,7 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const refresh=async()=>{try{const rows=await get('/rest/v1/navo_booking_messages?select=id,sender_id,body,created_at&booking_id=eq.'+bookingId+'&order=created_at.asc&limit=100',accessToken);
  messages.replaceChildren();if(!rows.length)messages.append(text('p','Сообщений пока нет'));
  for(const m of rows){const p=document.createElement('div');p.className='navo-message-bubble '+(m.sender_id===viewerId?'navo-message-out':'navo-message-in');const body=text('span',m.body);const time=text('small',new Date(m.created_at).toLocaleTimeString('ru-RU',{timeZone:'Asia/Dushanbe',hour:'2-digit',minute:'2-digit'}));p.append(body,time);if(m.sender_id===viewerId)p.append(text('small','✓✓'));messages.append(p)}
- requestAnimationFrame(()=>{messages.scrollTop=messages.scrollHeight});
+ requestAnimationFrame(()=>{layoutChat();messages.scrollTop=messages.scrollHeight});
  status.textContent='Сообщений: '+rows.length;await markChatRead(bookingId,viewerId,accessToken);
  }catch(e){status.textContent='Ошибка загрузки переписки: '+e.message}};
  const quick=document.createElement('div');quick.className='navo-messenger-quick';
@@ -205,15 +205,22 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const layoutChat=()=>{
   if(!details.open)return;
   const viewport=window.visualViewport;
-  const height=Math.round(viewport?.height||window.innerHeight);
+  const height=Math.max(280,Math.round(viewport?.height||window.innerHeight));
   const top=Math.round(viewport?.offsetTop||0);
   setFixed(details,{position:'fixed',top:top+'px',left:'0px',right:'0px',bottom:'auto',height:height+'px','max-height':height+'px',width:'100%','overflow':'hidden','z-index':'2147483000'});
-  setFixed(wrap,{position:'absolute',inset:'0',height:'100%',width:'100%',display:'flex','flex-direction':'column','min-height':'0','overflow':'hidden',margin:'0',padding:'0'});
-  setFixed(head,{position:'relative',top:'auto',bottom:'auto',height:'auto','max-height':'none','flex':'0 0 auto'});
-  setFixed(messages,{position:'relative',top:'auto',bottom:'auto',left:'auto',right:'auto',height:'auto','max-height':'none','min-height':'0','flex':'1 1 0','overflow-y':'auto','overflow-x':'hidden'});
+  setFixed(wrap,{position:'absolute',top:'0',left:'0',right:'0',bottom:'0',height:'100%',width:'100%',display:'block','min-height':'0','overflow':'hidden',margin:'0',padding:'0'});
+  setFixed(head,{position:'absolute',top:'0',left:'0',right:'0',bottom:'auto',height:'auto','max-height':'none',margin:'0'});
   setFixed(status,{display:'none'});
-  setFixed(quick,{position:'relative',top:'auto',bottom:'auto',height:'auto','max-height':'54px','flex':'0 0 auto'});
-  setFixed(composer,{position:'relative',top:'auto',bottom:'auto',height:'auto','max-height':'none','min-height':'64px','flex':'0 0 auto'});
+  // Absolute positioning makes the message list the ONLY scrollable area.
+  // The input stays anchored even after hundreds of messages or keyboard resize.
+  const headerHeight=Math.ceil(head.getBoundingClientRect().height)||88;
+  const composerHeight=active?Math.ceil(composer.getBoundingClientRect().height)||76:0;
+  const quickHeight=active?Math.ceil(quick.getBoundingClientRect().height)||52:0;
+  if(active){
+   setFixed(composer,{position:'absolute',top:'auto',bottom:'0',left:'0',right:'0',width:'100%',height:composerHeight+'px','max-height':'none','min-height':'0',display:'flex',margin:'0'});
+   setFixed(quick,{position:'absolute',top:'auto',bottom:composerHeight+'px',left:'0',right:'0',height:quickHeight+'px','max-height':'none',display:'flex',margin:'0'});
+  }
+  setFixed(messages,{position:'absolute',top:headerHeight+'px',bottom:(composerHeight+quickHeight)+'px',left:'0',right:'0',width:'100%',height:'auto','max-height':'none','min-height':'0',display:'flex','flex-direction':'column','overflow-y':'auto','overflow-x':'hidden','overscroll-behavior-y':'contain',margin:'0'});
  };
  const closeChat=()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)};
  back.onclick=closeChat;
