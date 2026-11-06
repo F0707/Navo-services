@@ -175,7 +175,7 @@ async function updateBookingUnread(){
 }
 function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const wrap=document.createElement('div');wrap.className='item navo-chat-content';wrap.style.marginTop='10px';wrap.style.background='transparent';
- const header=text('div',(meta.name||(role==='master'?'Клиент':'Мастер NAVO'))+(role==='client'?' (Мастер)':''));header.className='navo-messenger-heading';const info=text('p',[meta.service,meta.date].filter(Boolean).join(' · ')||'Переписка по записи');info.className='muted navo-messenger-subtitle';const head=document.createElement('div');head.className='navo-messenger-head';const back=button('←',()=>{details.open=false});back.className='navo-chat-back';head.append(back);if(meta.photo){const avatar=document.createElement('img');avatar.src=meta.photo;avatar.alt='Фото мастера';avatar.className='navo-chat-avatar';head.append(avatar)}const headerCopy=document.createElement('div');headerCopy.className='navo-chat-contact';headerCopy.append(header,info);head.append(headerCopy);if(meta.phone){const call=document.createElement('a');call.href='tel:'+String(meta.phone).replace(/[^+\d]/g,'');call.textContent='📞';call.className='navo-messenger-call';call.setAttribute('aria-label','Позвонить мастеру');head.append(call)}
+ const header=text('div',(meta.name||(role==='master'?'Клиент':'Мастер NAVO'))+(role==='client'?' (Мастер)':''));header.className='navo-messenger-heading';const info=text('p',[meta.service,meta.date].filter(Boolean).join(' · ')||'Переписка по записи');info.className='muted navo-messenger-subtitle';const head=document.createElement('div');head.className='navo-messenger-head';const back=button('←',()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)});back.className='navo-chat-back';head.append(back);if(meta.photo){const avatar=document.createElement('img');avatar.src=meta.photo;avatar.alt='Фото мастера';avatar.className='navo-chat-avatar';head.append(avatar)}const headerCopy=document.createElement('div');headerCopy.className='navo-chat-contact';headerCopy.append(header,info);head.append(headerCopy);if(meta.phone){const call=document.createElement('a');call.href='tel:'+String(meta.phone).replace(/[^+\d]/g,'');call.textContent='📞';call.className='navo-messenger-call';call.setAttribute('aria-label','Позвонить мастеру');head.append(call)}
  const messages=document.createElement('div');messages.className='navo-messenger-messages';
  const status=text('p','');status.className='muted';
  const input=document.createElement('input');input.type='text';input.className='navo-chat-input';input.maxLength=500;input.placeholder='Напишите сообщение…';input.disabled=!active;
@@ -251,6 +251,7 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
 }
 let clientRenderRunning=false,clientRenderQueued=false;
 let cachedBookings=null,cachedBookingUser=null;
+let navoClientRefreshPromise=null;
 let navoFocusedBookingId=null;
 function navoSetBookingFocus(id){
  navoFocusedBookingId=id;
@@ -265,7 +266,7 @@ function navoSetBookingFocus(id){
  }
  if(!id){for(const chat of document.querySelectorAll('details.navo-chat[open]'))chat.open=false;document.body.classList.remove('navo-chat-screen-open')}
 }
-window.navoShowAllBookings=()=>navoSetBookingFocus(null);
+window.navoShowAllBookings=()=>{navoSetBookingFocus(null);const box=$('bookings-items');if(box)box.scrollIntoView({block:'start',behavior:'instant'});};
 
 window.navoChatPanel=chatPanel;
 async function clientCards(force=false){
@@ -278,12 +279,12 @@ async function clientCards(force=false){
   if(box&&box.childElementCount)box.style.visibility='visible';
   if(status)status.textContent='';
   // Existing DOM is the in-memory cache: no blocking Supabase call or redraw.
-  get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(uid)+'&order=starts_at.desc&limit=100')
-   .then(rows=>{const fingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));if(fingerprint!==cachedBookings&&$('bookings')&&!$('bookings').classList.contains('hide'))clientCards(true).catch(console.error)})
-   .catch(console.warn);
+  if(!navoClientRefreshPromise){navoClientRefreshPromise=get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(uid)+'&order=starts_at.desc&limit=100')
+   .then(rows=>{const fingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));if(fingerprint!==cachedBookings&&$('bookings')&&!$('bookings').classList.contains('hide'))return clientCards(true)})
+   .catch(console.warn).finally(()=>{navoClientRefreshPromise=null})}
   return;
  }
- if(clientRenderRunning){clientRenderQueued=true;return}
+ if(clientRenderRunning){if(force)clientRenderQueued=true;return}
  clientRenderRunning=true;
  try{await renderClientCards();cachedBookings=box?.dataset.bookingFingerprint||'[]';if(status)status.textContent=''}
  finally{clientRenderRunning=false;if(clientRenderQueued){clientRenderQueued=false;clientCards(true).catch(console.error)}}
@@ -316,7 +317,7 @@ async function renderClientCards(){
  const card=document.createElement('div');card.className='item navo-booking-tile bg-white rounded-2xl p-4 border-2 border-emerald-600/20 shadow-sm space-y-3 mb-3';card.dataset.bookingCard=b.id;
  const master=masterMap.get(b.master_id);const title=text('strong',master?.display_name||'Мастер NAVO');const status=text('span',({completed:'Завершена',cancelled:'Отменена',requested:'Ожидает подтверждения',confirmed:'Подтверждена'}[b.status]||b.status));status.className='navo-booking-status navo-status-'+b.status;
  const detail=document.createElement('div');detail.hidden=true;const appointmentDate=navoTimeBadge(b.starts_at);const top=document.createElement('div');top.className='navo-client-booking-top';top.append(appointmentDate,status);card.append(top);const identity=document.createElement('div');identity.className='navo-booking-identity';if(master?.photo_url){const avatar=document.createElement('img');avatar.src=master.photo_url;avatar.alt='Фото мастера';avatar.className='navo-booking-avatar';identity.append(avatar)}const identityText=document.createElement('div');identityText.append(title);identity.append(identityText);card.append(identity);const address=text('p',[master?.city,master?.work_address].filter(Boolean).join(', ')||'Адрес уточняется');address.className='navo-booking-address';identityText.append(address);
- const toggle=button('← К списку записей',()=>navoSetBookingFocus(null));toggle.className='secondary navo-client-booking-open';detail.className='navo-client-booking-details';detail.prepend(toggle);card.append(detail);
+ const toggle=button('← К списку записей',()=>window.navoShowAllBookings());toggle.className='secondary navo-client-booking-open';detail.className='navo-client-booking-details';detail.prepend(toggle);card.append(detail);
  card.addEventListener('click',event=>{if(event.target.closest('button,a,input,select,textarea,label,details,summary'))return;if(detail.hidden)navoSetBookingFocus(b.id)});
 
  if(master?.photo_url){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото мастера';photo.style.cssText='width:48px;height:48px;object-fit:cover;border-radius:10px;float:right;margin:0 0 6px 8px';detail.append(photo)}
