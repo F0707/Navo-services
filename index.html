@@ -1163,7 +1163,7 @@ function navoProfileCards(){
  const schedule=document.createElement('section');schedule.className='navo-master-profile-card';schedule.innerHTML='<h3>График работы</h3><p class="muted">Расписание мастера и доступные часы редактируются в разделе записей.</p><button class="secondary full" type="button" id="navo-profile-schedule">Открыть расписание</button>';profile.insertBefore(schedule,profile.querySelectorAll('.navo-master-profile-card')[1]||null);
  el('navo-profile-schedule').onclick=()=>navoMasterView('bookings');
 }
-window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,show,catalog,masterEditLoad,masterBookings,bookings};
+
 try{navoProfileCards()}catch(error){console.error('NAVO profile layout initialization',error)}
 function navoMasterLayout(){
  const root=el('ml-dashboard');if(!root||el('masterView'))return;
@@ -1228,6 +1228,7 @@ const navoModalClose=document.createElement('button');navoModalClose.type='butto
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-toggle-password]');if(!b)return;const input=el(b.dataset.togglePassword);if(!input)return;const showing=input.type==='password';input.type=showing?'text':'password';b.setAttribute('aria-pressed',String(showing));b.setAttribute('aria-label',showing?'Скрыть пароль':'Показать пароль');b.textContent=showing?'🙈':'👁'});
 let masterSession=null,masterProfile=null,masterEmailPending='';
+window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,show,catalog,masterEditLoad,masterBookings,bookings};
 el('md-password-open').onclick=()=>{el('md-password-panel').classList.toggle('hide');};
 el('md-password-save').onclick=async()=>{
  const b=el('md-password-save'),p=el('md-password-new').value,q=el('md-password-repeat').value;
