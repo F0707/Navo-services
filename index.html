@@ -1291,7 +1291,7 @@ async function navoRecoveryCall(path,payload,token,method='POST'){
  try{
   const response=await fetch(ROOT+path,{method,signal:controller.signal,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(payload)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(String(data.msg||data.message||data.error_description||data.error||'HTTP '+response.status));
+  if(!response.ok){const detail=String(data.msg||data.message||data.error_description||data.error||'Ошибка сервера');const code=String(data.error_code||data.code||'');throw Error('HTTP '+response.status+(code?' ['+code+']':'')+': '+detail)}
   return data;
  }finally{clearTimeout(timer)}
 }
@@ -1320,7 +1320,7 @@ el('ml-reset-confirm').onclick=async()=>{
   window.navoRecoveryToken=null;window.navoRecoveryRefreshToken=null;
   el('ml-email').value=email;el('ml-password').value='';showLoginForm();el('ml-status').textContent='Пароль обновлён. Войдите с новым паролем.';
   el('ml-reset-code').value='';el('ml-reset-password').value='';el('ml-reset-password2').value='';
- }catch(e){const message=String(e.message||e);status.textContent=/otp_expired|token has expired or is invalid|expired|invalid token/i.test(message)?'Supabase отклонил код как недействительный. Это может быть код из более раннего письма, даже если прошло меньше минуты. Используйте код из последнего запроса; не нажимайте повторную отправку, пока ждёте письмо.':'Не удалось восстановить пароль: '+message}
+ }catch(e){const message=String(e.message||e);status.textContent=/Проверка кода:.*(403|otp_expired|expired|invalid|token)/i.test(message)?'Код отклонён сервером при проверке (не из-за времени ввода). Используйте код из самого последнего письма. Не отправляйте новый запрос, пока ожидаете письмо. Техническая причина: '+message:'Не удалось восстановить пароль: '+message}
  finally{btn.disabled=false}
 };
 async function navoFinishMasterSignIn(signed,email){
