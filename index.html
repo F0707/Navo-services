@@ -526,6 +526,16 @@ header #btnMasterEntrance{width:42px!important;height:42px!important;flex:0 0 42
 #catalog-items .navo-master-card[hidden]{display:none!important}
 #catalog.navo-master-detail-open .navo-catalog-head{display:none!important}
 
+
+/* NAVO bottom navigation independent of layout width and clipping */
+body>.navo-client-tabs.navo-body-bottom-tabs{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;transform:none!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;margin:0!important;padding:7px 5px max(10px,env(safe-area-inset-bottom))!important;border-radius:0!important;background:#fff!important;z-index:9000!important;box-shadow:0 -4px 15px #143f2b15!important}
+body>.navo-client-tabs.navo-body-bottom-tabs[hidden]{display:none!important}
+body>.navo-client-tabs.navo-body-bottom-tabs>button{width:100%!important;min-width:0!important;max-width:100%!important;display:block!important;margin:0!important;padding:12px 1px!important;font-size:12px!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#catalog:not(.navo-master-detail-open) .navo-catalog-head,#catalog:not(.navo-master-detail-open) #navo-service-chips{display:flex!important}
+#catalog:not(.navo-master-detail-open) #navo-catalog-search{display:block!important}
+#catalog:not(.navo-master-detail-open) .navo-region-control{display:flex!important}
+#catalog-items>.navo-master-card{min-height:0!important}
+
 /* NAVO catalog: final mobile fixes, leave uploaded master photographs unchanged */
 html,body{max-width:100%;overflow-x:hidden}
 header{width:100%;min-height:76px;padding:12px 18px!important}
@@ -711,6 +721,17 @@ el('navo-specialist-entry').onclick=()=>{
 };
 el('btnMasterEntrance').onclick=()=>el('navo-specialist-entry').click();
 el('navo-region-select').addEventListener('change',()=>{navoApplyCatalogRegion()});
+/* Keep the four-tab bar outside constrained/transformed page containers. */
+(function navoMountBottomNavigation(){
+ const nav=document.querySelector('#inside > .navo-client-tabs'),inside=el('inside');
+ if(!nav||!inside)return;
+ document.body.append(nav);
+ nav.classList.add('navo-body-bottom-tabs');
+ const sync=()=>{nav.hidden=inside.classList.contains('hide')||inside.classList.contains('navo-master-view')};
+ new MutationObserver(sync).observe(inside,{attributes:true,attributeFilter:['class']});
+ sync();
+})();
+
 const navoModal=el('master-login');navoModal.classList.add('navo-login-modal');
 const navoModalClose=document.createElement('button');navoModalClose.type='button';navoModalClose.className='secondary full';navoModalClose.textContent='Отмена';navoModalClose.addEventListener('click',()=>{el('master-login').classList.remove('navo-login-modal');show('catalog');catalog()});el('ml-signin-form').append(navoModalClose);
 
