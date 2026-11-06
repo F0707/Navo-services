@@ -199,7 +199,7 @@ async function renderClientCards(){
  const user=api().getAuth()?.user;if(!user)return;
  const rawRows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');const rows=[...new Map(rawRows.map(b=>[b.id,b])).values()];
  box.dataset.bookingFingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));box.replaceChildren();if(!rows.length){box.append(text('p','У вас пока нет записей'));return}
- const masters=await get('/rest/v1/navo_test_master_catalog?select=master_id,display_name,city,work_address,photo_url,phone&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
+ const masters=await get('/rest/v1/navo_test_master_catalog?select=*&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
  const bookingData=await Promise.all(rows.map(async b=>{
   const [items,code]=await Promise.all([
    get('/rest/v1/navo_booking_items?select=service_name,price_somoni&booking_id=eq.'+b.id).catch(()=>[]),
