@@ -906,7 +906,7 @@ async function request(path,body,token,method='POST'){
    const json=await response.json().catch(()=>({}));
    if(!response.ok){
     const message=String(json.msg||json.message||json.error_description||json.error||'Ошибка сервера '+response.status);
-    if(attempt===0&&!isRefresh&&!isAuthEndpoint&&isProtected&&(response.status===401||/jwt expired|token.*expired/i.test(message))){accessToken=await navoRefreshAccessToken();continue}
+    if(attempt===0&&!isRefresh&&!isAuthEndpoint&&isProtected&&(response.status===401||/jwt expired|token.*expired/i.test(message))){accessToken=auth?.access_token&&accessToken!==auth.access_token?auth.access_token:await navoRefreshAccessToken();continue}
     if(/jwt expired|token.*expired/i.test(message))throw Error('Сессия истекла. Войдите в NAVO повторно — ваши записи сохранятся.');
     throw Error(message);
    }
@@ -919,7 +919,7 @@ async function request(path,body,token,method='POST'){
  }
  throw Error('Не удалось обновить авторизацию. Войдите повторно.');
 }
-async function current(){if(!auth?.access_token)throw Error('Нет активного входа');try{return await request('/auth/v1/user',null,auth.access_token,'GET')}catch(e){if(!auth.refresh_token)throw e;const n=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:auth.refresh_token});save({...n,expires_at:Date.now()+(Number(n.expires_in)||3600)*1000});return request('/auth/v1/user',null,auth.access_token,'GET')}}
+async function current(){if(!auth?.access_token)throw Error('Нет активного входа');try{if(auth.refresh_token&&auth.expires_at&&Date.now()>Number(auth.expires_at)-60000)await navoRefreshAccessToken();return await request('/auth/v1/user',null,auth.access_token,'GET')}catch(e){if(!auth?.refresh_token)throw e;await navoRefreshAccessToken();return request('/auth/v1/user',null,auth.access_token,'GET')}}
 function normalize(){const d=el('phone').value.replace(/\D/g,'');return d.startsWith('992')?d:'992'+d}
 el('send').onclick=async()=>{phone=normalize();if(!/^992\d{9}$/.test(phone)){msg('Введите номер Таджикистана в формате +992 XX XXX XX XX');return}el('send').disabled=true;msg('Отправляем SMS…');try{await request('/auth/v1/otp',{phone:'+'+phone,create_user:true});el('code-area').classList.remove('hide');msg('SMS отправлено. Введите шестизначный код.');el('code').focus()}catch(e){msg('Ошибка отправки SMS: '+e.message)}finally{el('send').disabled=false}};
 el('verify').onclick=async()=>{const token=el('code').value.trim();if(!/^\d{6}$/.test(token)){msg('Введите 6 цифр из SMS');return}el('verify').disabled=true;msg('Проверяем SMS…');try{const a=await request('/auth/v1/verify',{phone:'+'+phone,token,type:'sms'});if(!a.access_token)throw Error('Не получена сессия');save({...a,navo_phone:'+'+phone,expires_at:Date.now()+(Number(a.expires_in)||3600)*1000});await enter()}catch(e){msg('Ошибка подтверждения: '+e.message)}finally{el('verify').disabled=false}};
