@@ -1264,14 +1264,14 @@ el('md-general-view').onclick=()=>{sessionStorage.setItem('navo-view-mode','prev
 el('ml-back').textContent='← К каталогу';el('ml-back').onclick=()=>{el('master-login').classList.remove('navo-login-modal');el('ml-signin-form').classList.remove('navo-recovery-mode');show('catalog');catalog()};
 async function handleRecoveryLink(){
  const hash=new URLSearchParams(location.hash.slice(1)),query=new URLSearchParams(location.search);
- const access=hash.get('access_token'),type=hash.get('type'),error=hash.get('error_description')||query.get('error_description');
+ const access=hash.get('access_token'),refresh=hash.get('refresh_token'),type=hash.get('type'),error=hash.get('error_description')||query.get('error_description');
  if(!access&&type!=='recovery'&&!error)return;
  const panel=el('forgotPasswordView');el('inside').classList.remove('hide');el('login').classList.add('hide');el('master-login').classList.remove('hide');el('master-login').classList.add('navo-login-modal');el('ml-signin-form').classList.add('navo-recovery-mode');panel.classList.remove('hide');
  el('ml-reset-step2').classList.remove('hide');el('btnSendResetLink').classList.add('hide');el('ml-reset-code').classList.add('hide');
  const status=el('ml-reset-status');if(error){status.textContent='Ссылка недействительна или срок её действия истёк: '+error;return}
- if(access&&type==='recovery'){window.navoRecoveryToken=access;status.textContent='Ссылка подтверждена. Придумайте новый пароль и повторите его.';history.replaceState(null,'',location.pathname)}
+ if(access&&type==='recovery'){window.navoRecoveryToken=access;window.navoRecoveryRefreshToken=refresh;status.textContent='Ссылка подтверждена. Придумайте новый пароль и повторите его.';history.replaceState(null,'',location.pathname)}
 }
-el('ml-forgot').onclick=()=>{el('resetEmailInput').value=el('ml-email').value.trim();el('ml-signin-form').classList.add('navo-recovery-mode');el('forgotPasswordView').classList.remove('hide');el('ml-reset-step2').classList.add('hide');el('ml-reset-code').classList.remove('hide');el('btnSendResetLink').classList.remove('hide');el('ml-reset-status').textContent='Введите почту и нажмите «Отправить ссылку для сброса».';el('resetEmailInput').focus()};
+el('ml-forgot').onclick=()=>{el('resetEmailInput').value=el('ml-email').value.trim();el('ml-signin-form').classList.add('navo-recovery-mode');el('forgotPasswordView').classList.remove('hide');el('ml-reset-step2').classList.add('hide');el('ml-reset-code').classList.remove('hide');el('btnSendResetLink').classList.remove('hide');el('ml-reset-status').textContent='Введите почту и нажмите «Отправить ссылку для сброса». Код начинает действовать с момента отправки Supabase, а не с момента получения письма.';el('resetEmailInput').focus()};
 function showLoginForm(){el('ml-signin-form').classList.remove('navo-recovery-mode');el('forgotPasswordView').classList.add('hide');el('ml-reset-step2').classList.add('hide')}el('btnBackToLogin').onclick=showLoginForm;
 const NAVO_RESET_RESEND_SECONDS=60;
 let navoResetSentAt=0;
@@ -1293,9 +1293,11 @@ el('ml-reset-confirm').onclick=async()=>{
  if(password!==again){status.textContent='Пароли не совпадают';return}
  btn.disabled=true;status.textContent='Проверяем код…';
  try{
- const verified=window.navoRecoveryToken?{access_token:window.navoRecoveryToken}:await request('/auth/v1/verify',{type:'recovery',email,token:code});
+ let verified=window.navoRecoveryToken?{access_token:window.navoRecoveryToken,refresh_token:window.navoRecoveryRefreshToken}:await request('/auth/v1/verify',{type:'recovery',email,token:code});
  if(!verified.access_token)throw Error('Код подтверждён, но сервер не предоставил доступ для смены пароля');
- await request('/auth/v1/user',{password},verified.access_token,'PUT');window.navoRecoveryToken=null;
+ try{await request('/auth/v1/user',{password},verified.access_token,'PUT')}
+ catch(err){if(!verified.refresh_token||!/expired|jwt|token|сессия истекла/i.test(err.message))throw err;verified=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:verified.refresh_token});await request('/auth/v1/user',{password},verified.access_token,'PUT')}
+ window.navoRecoveryToken=null;window.navoRecoveryRefreshToken=null;
  el('ml-email').value=email;el('ml-password').value='';showLoginForm();el('ml-status').textContent='Пароль успешно установлен. Введите новый пароль и нажмите «Войти в кабинет мастера».';
  el('ml-reset-code').value='';el('ml-reset-password').value='';el('ml-reset-password2').value='';
  }catch(e){status.textContent=/expired|invalid|истекла|истёк|token/i.test(e.message)?'Код или ссылка недействительны либо истекли. Нажмите «Отправить ссылку для сброса» повторно после окончания таймера.':'Не удалось восстановить пароль: '+e.message}
