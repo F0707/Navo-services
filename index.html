@@ -1244,7 +1244,7 @@ el('navo-master-logout').onclick=async()=>{
  el('inside').classList.remove('hide','navo-master-view');el('login').classList.add('hide');show('catalog');catalog().catch(console.warn);
 };
 el('navo-master-new-booking').onclick=()=>{navoMasterView('bookings');const status=el('md-today-status');if(status)status.textContent='Для ручной записи используйте расписание мастера.'};
-new MutationObserver(()=>{const master=!el('master-login').classList.contains('hide')&&!el('ml-dashboard').classList.contains('hide');navoMasterNav.hidden=!master}).observe(el('master-login'),{attributes:true,subtree:true,attributeFilter:['class']});
+new MutationObserver(()=>{const master=!el('master-login').classList.contains('hide')&&!el('ml-dashboard').classList.contains('hide');navoMasterNav.hidden=true;if(el('masterBottomNav'))el('masterBottomNav').hidden=!master}).observe(el('master-login'),{attributes:true,subtree:true,attributeFilter:['class']});
 
 const navoModal=el('master-login');navoModal.classList.add('navo-login-modal');
 const navoModalClose=document.createElement('button');navoModalClose.type='button';navoModalClose.className='secondary full';navoModalClose.textContent='Отмена';navoModalClose.addEventListener('click',()=>{showLoginForm();el('master-login').classList.remove('navo-login-modal');show('catalog');catalog()});el('ml-signin-form').append(navoModalClose);
