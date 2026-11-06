@@ -876,7 +876,49 @@ const el=id=>document.getElementById(id);let auth=null,phone='';
 const msg=t=>el('login-status').textContent=t;
 const load=()=>{try{return JSON.parse(localStorage.getItem(AK)||'null')}catch{return null}};
 const save=a=>{auth=a;localStorage.setItem(AK,JSON.stringify(a));sessionStorage.setItem(AK,JSON.stringify(a))};
-async function request(path,body,token,method='POST'){try{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),18000);let r;try{r=await fetch(ROOT+path,{method,signal:controller.signal,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})})}finally{clearTimeout(timer)}const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.msg||j.message||j.error_description||j.error||'Ошибка сервера '+r.status);return j}catch(e){const msg=e?.name==='AbortError'?'Сервер NAVO не ответил вовремя. Попробуйте ещё раз.':e instanceof TypeError?'Нет соединения с сервером NAVO. Проверьте интернет и повторите.':e?.message||'Не удалось выполнить запрос';throw Error(msg)}}
+let navoRefreshInFlight=null;
+async function navoRefreshAccessToken(){
+ if(navoRefreshInFlight)return navoRefreshInFlight;
+ navoRefreshInFlight=(async()=>{
+  if(!auth?.refresh_token)throw Error('Сессия истекла. Войдите в NAVO повторно — ваши записи сохранятся.');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+  try{
+   const response=await fetch(ROOT+'/auth/v1/token?grant_type=refresh_token',{method:'POST',signal:controller.signal,headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:auth.refresh_token})});
+   const next=await response.json().catch(()=>({}));
+   if(!response.ok||!next.access_token)throw Error('Сессия истекла. Войдите в NAVO повторно — ваши записи сохранятся.');
+   save({...auth,...next,expires_at:Date.now()+(Number(next.expires_in)||3600)*1000});
+   return auth.access_token;
+  }catch(error){if(error?.name==='AbortError'||error instanceof TypeError)throw Error('Нет связи с сервером NAVO. Проверьте интернет и повторите.');throw error}
+  finally{clearTimeout(timer)}
+ })();
+ try{return await navoRefreshInFlight}finally{navoRefreshInFlight=null}
+}
+async function request(path,body,token,method='POST'){
+ const isAuthEndpoint=path.startsWith('/auth/v1/');
+ const isRefresh=path.includes('grant_type=refresh_token');
+ const isProtected=!isAuthEndpoint&&Boolean(token||auth?.access_token);
+ let accessToken=token;
+ if(isProtected&&auth?.refresh_token&&auth?.access_token&&token===auth.access_token&&auth.expires_at&&Date.now()>Number(auth.expires_at)-60000){accessToken=await navoRefreshAccessToken()}
+ for(let attempt=0;attempt<2;attempt++){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+  try{
+   const response=await fetch(ROOT+path,{method,signal:controller.signal,headers:{apikey:KEY,'Content-Type':'application/json',...(accessToken?{Authorization:'Bearer '+accessToken}:{})},...(body!==null&&body!==undefined?{body:JSON.stringify(body)}:{})});
+   const json=await response.json().catch(()=>({}));
+   if(!response.ok){
+    const message=String(json.msg||json.message||json.error_description||json.error||'Ошибка сервера '+response.status);
+    if(attempt===0&&!isRefresh&&!isAuthEndpoint&&isProtected&&(response.status===401||/jwt expired|token.*expired/i.test(message))){accessToken=await navoRefreshAccessToken();continue}
+    if(/jwt expired|token.*expired/i.test(message))throw Error('Сессия истекла. Войдите в NAVO повторно — ваши записи сохранятся.');
+    throw Error(message);
+   }
+   return json;
+  }catch(error){
+   if(error?.name==='AbortError')throw Error('Сервер NAVO не ответил вовремя. Повторите попытку.');
+   if(error instanceof TypeError)throw Error('Нет соединения с сервером NAVO. Проверьте интернет.');
+   throw error;
+  }finally{clearTimeout(timer)}
+ }
+ throw Error('Не удалось обновить авторизацию. Войдите повторно.');
+}
 async function current(){if(!auth?.access_token)throw Error('Нет активного входа');try{return await request('/auth/v1/user',null,auth.access_token,'GET')}catch(e){if(!auth.refresh_token)throw e;const n=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:auth.refresh_token});save({...n,expires_at:Date.now()+(Number(n.expires_in)||3600)*1000});return request('/auth/v1/user',null,auth.access_token,'GET')}}
 function normalize(){const d=el('phone').value.replace(/\D/g,'');return d.startsWith('992')?d:'992'+d}
 el('send').onclick=async()=>{phone=normalize();if(!/^992\d{9}$/.test(phone)){msg('Введите номер Таджикистана в формате +992 XX XXX XX XX');return}el('send').disabled=true;msg('Отправляем SMS…');try{await request('/auth/v1/otp',{phone:'+'+phone,create_user:true});el('code-area').classList.remove('hide');msg('SMS отправлено. Введите шестизначный код.');el('code').focus()}catch(e){msg('Ошибка отправки SMS: '+e.message)}finally{el('send').disabled=false}};
