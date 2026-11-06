@@ -27,33 +27,75 @@ function dateTimeControls(initialDate,initialTime){
 }
 const mobileDateCss=document.createElement('style');mobileDateCss.textContent='.navo-date-select,.navo-time-select{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;border:1px solid #9eafa5;border-radius:12px;background:#fff;color:#173f35;font:inherit;font-size:16px;padding:13px;margin:10px 0 15px;appearance:auto}';document.head.append(mobileDateCss);
 async function openMaster(master){
- const box=$('catalog-items');box.replaceChildren();$('catalog')?.classList.add('navo-master-detail-open');box.append(button('← Назад в каталог',()=>{api().catalog();window.scrollTo(0,0)}));window.scrollTo(0,0);
+ const box=$('catalog-items');
+ const search=$('navo-catalog-search'),searchValue=search?.value||'';
+ const previousScroll=window.scrollY;
+ const goBack=async()=>{await api().catalog();if(search){search.value=searchValue;search.dispatchEvent(new Event('input',{bubbles:true}))}requestAnimationFrame(()=>window.scrollTo(0,previousScroll))};
+ box.replaceChildren();$('catalog')?.classList.add('navo-master-detail-open');
+ const bar=document.createElement('div');bar.className='navo-profile-topbar';
+ const back=button('← Назад в каталог',goBack);back.className='navo-profile-back';
+ const brand=text('strong','NAVO');brand.className='navo-profile-brand';
+ const share=button('↗ Поделиться',async()=>{const url=new URL(window.location.href);url.searchParams.set('master',master.master_id);try{if(navigator.share)await navigator.share({title:master.display_name||'Мастер NAVO',url:url.href});else if(navigator.clipboard){await navigator.clipboard.writeText(url.href);share.textContent='✓ Ссылка скопирована'}else prompt('Ссылка на мастера',url.href)}catch(e){if(e.name!=='AbortError')console.warn(e)}});share.className='navo-profile-share';
+ bar.append(back,brand,share);box.append(bar);window.scrollTo(0,0);
  const profile=document.createElement('div');profile.className='navo-selected-master-profile';
  const avatar=document.createElement('div');avatar.className='navo-selected-master-avatar';
  if(master.photo_url&&/^https:\/\//i.test(master.photo_url)){const photo=document.createElement('img');photo.src=master.photo_url;photo.alt='Фото профиля мастера '+(master.display_name||'NAVO');photo.loading='eager';photo.decoding='async';photo.fetchPriority='high';photo.onerror=()=>{photo.remove();avatar.textContent='✂'};avatar.append(photo)}else{avatar.textContent='✂'}
- const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p',[master.city,master.work_address].filter(Boolean).join(', ')));const rating=master.navoRating;const stars=text('div',rating&&Number(rating.reviews_count)>0?'★'.repeat(Math.max(0,Math.min(5,Math.round(Number(rating.average_stars)))))+'☆'.repeat(5-Math.max(0,Math.min(5,Math.round(Number(rating.average_stars)))))+'  '+Number(rating.average_stars).toFixed(1)+' / 5 · '+rating.reviews_count+' оценок':'☆☆☆☆☆  Пока нет оценок');stars.className='navo-selected-master-rating';info.append(stars);profile.append(avatar,info);box.append(profile);
+ const info=document.createElement('div');info.className='navo-selected-master-info';info.append(text('h3',master.display_name||'Мастер NAVO'),text('p','📍 '+[master.city,master.work_address].filter(Boolean).join(', ')));const rating=master.navoRating;const stars=text('div',rating&&Number(rating.reviews_count)>0?'★'.repeat(Math.max(0,Math.min(5,Math.round(Number(rating.average_stars)))))+'☆'.repeat(5-Math.max(0,Math.min(5,Math.round(Number(rating.average_stars)))))+'  '+Number(rating.average_stars).toFixed(1)+' / 5 · '+rating.reviews_count+' оценок':'☆☆☆☆☆  Пока нет оценок');stars.className='navo-selected-master-rating';info.append(stars);
+ const experience=Number(master.experience_years);
+ if(Number.isFinite(experience)&&experience>0){const badge=text('span','Опыт '+experience+' '+(experience===1?'год':experience<5?'года':'лет'));badge.className='navo-master-experience';info.append(badge)}
+ profile.append(avatar,info);box.append(profile);
+ const landmark=master.landmark||master.reference_point||master.address_landmark||'';
  const address=[master.city,master.work_address].filter(Boolean).join(', ');
+ const fullAddress=address+(landmark?' (ор-р '+landmark+')':'');
+ const latitude=Number(master.latitude??master.lat),longitude=Number(master.longitude??master.lng??master.lon);
+ const hasCoordinates=Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180&&!(latitude===0&&longitude===0);
+ const destination=hasCoordinates?latitude+','+longitude:address+', Таджикистан';
  if(address){
   const location=document.createElement('section');location.className='navo-master-location';
   location.append(text('h3','📍 Как найти мастера'));
-  location.append(text('p',address));
-  const map=document.createElement('iframe');map.className='navo-master-map';map.title='Карта расположения мастера';map.loading='lazy';map.referrerPolicy='no-referrer-when-downgrade';map.src='https://maps.google.com/maps?q='+encodeURIComponent(address+', Таджикистан')+'&z=16&output=embed';location.append(map);
+  location.append(text('p',fullAddress));
+  const map=document.createElement('iframe');map.className='navo-master-map';map.title='Карта расположения мастера';map.loading='lazy';map.referrerPolicy='no-referrer-when-downgrade';map.src='https://maps.google.com/maps?q='+encodeURIComponent(destination)+'&z=16&output=embed';location.append(map);
+  const openMap=document.createElement('a');openMap.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(destination);openMap.target='_blank';openMap.rel='noopener noreferrer';openMap.textContent='Открыть в Картах ↗';openMap.className='navo-map-open';location.insertBefore(openMap,map);
   const directions=document.createElement('a');directions.className='navo-master-directions';directions.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address+', Таджикистан');directions.target='_blank';directions.rel='noopener noreferrer';directions.textContent='🧭 Построить маршрут в Google Картах';location.append(directions);
   location.append(text('small','Местоположение найдено по адресу мастера. Перед поездкой проверьте точку на карте.'));
   box.append(location)
  }
 
+ const album=document.createElement('section');album.className='navo-master-album';
+ const albumTitle=text('h3','Альбом работ');const albumHint=text('p','Примеры работ мастера');albumHint.className='muted';
+ const albumCount=text('span','');albumCount.className='navo-album-count';
+ const albumHead=document.createElement('div');albumHead.className='navo-album-heading';albumHead.append(albumTitle,albumCount);
+ const photos=document.createElement('div');photos.className='navo-album-strip';
+ album.append(albumHead,albumHint,photos);box.append(album);
+ const renderPhotos=urls=>{
+  const safe=[...new Set(urls.filter(x=>typeof x==='string'&&/^https:\/\//i.test(x)))].slice(0,20);
+  albumCount.textContent=safe.length+' фото';photos.replaceChildren();
+  if(!safe.length){photos.append(text('p','Мастер пока не добавил фотографии работ.'));return}
+  safe.forEach((url,i)=>{const thumb=document.createElement('button');thumb.type='button';thumb.className='navo-album-thumb';
+   const img=document.createElement('img');img.src=url;img.alt='Работа мастера '+(i+1);img.loading='lazy';thumb.append(img);
+   thumb.onclick=()=>{const overlay=document.createElement('div');overlay.className='navo-photo-lightbox';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+    const close=button('✕',()=>overlay.remove());close.className='navo-photo-close';const full=document.createElement('img');full.src=url;full.alt=img.alt;
+    overlay.append(close,full);overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});document.body.append(overlay)};
+   photos.append(thumb)});
+ };
+ renderPhotos(Array.isArray(master.portfolio_urls)?master.portfolio_urls:[]);
+ if(!Array.isArray(master.portfolio_urls)||!master.portfolio_urls.length){
+  get('/rest/v1/master_applications?select=portfolio_urls,experience_years&user_id=eq.'+encodeURIComponent(master.master_id)+'&limit=1').then(rows=>{
+   if(rows[0]?.portfolio_urls&&box.contains(album))renderPhotos(rows[0].portfolio_urls);
+   if(rows[0]?.experience_years&&!info.querySelector('.navo-master-experience')){const badge=text('span','Опыт '+rows[0].experience_years+' лет');badge.className='navo-master-experience';info.append(badge)}
+  }).catch(()=>{});
+ }
  const status=text('p','Загружаем услуги…');box.append(status);
  try{
  const rows=await get('/rest/v1/navo_test_master_prices?select=service_id,name,category,price_somoni&master_id=eq.'+encodeURIComponent(master.master_id)+'&order=category.asc,name.asc');
  status.textContent=rows.length?'Выберите одну или несколько услуг':'Мастер ещё не указал цены. Попросите мастера сохранить прайс-лист в личном кабинете.';
  if(!rows.length)return;
  const chosen=new Map(),groups={};for(const x of rows)(groups[x.category]??=[]).push(x);
- const total=text('h3','Итого: 0 сомони');
- const refresh=()=>{const sum=[...chosen.values()].reduce((a,x)=>a+Number(x.price_somoni),0);total.textContent='Итого: '+sum.toFixed(2)+' сомони';if(typeof checkSlot==='function')checkSlot()};
+ const total=text('h3','Итого к оплате: 0 сомони');total.className='navo-profile-total';
+ const refresh=()=>{const sum=[...chosen.values()].reduce((a,x)=>a+Number(x.price_somoni),0);total.textContent='Итого к оплате: '+sum.toFixed(2)+' сомони';if(typeof checkSlot==='function')checkSlot()};
  for(const [category,items] of Object.entries(groups)){
- const group=document.createElement('details');group.className='item';group.open=true;const title=text('summary',category+' ('+items.length+')');title.style.cssText='font-weight:700;cursor:pointer;padding:10px 0';group.append(title);
- for(const item of items){const line=document.createElement('label');line.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 0;font-weight:400';
+ const group=document.createElement('div');group.className='item navo-profile-service-group';const title=text('h3',category+' ('+items.length+')');title.style.cssText='font-weight:700;cursor:pointer;padding:10px 0';group.append(title);
+ for(const item of items){const line=document.createElement('label');line.className='navo-profile-service-row';line.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 0;font-weight:400';
  const check=document.createElement('input');check.type='checkbox';check.style.width='auto';check.onchange=()=>{if(check.checked)chosen.set(item.service_id,item);else chosen.delete(item.service_id);refresh()};
  const name=text('span',item.name);name.style.flex='1';const price=text('strong',item.price_somoni+' сом.');line.append(check,name,price);group.append(line)}box.append(group)
  }
@@ -68,7 +110,7 @@ async function openMaster(master){
  submit.disabled=true;result.textContent='Создаём запись…';
  const created=await rpc('navo_create_booking',{p_master:master.master_id,p_services:[...chosen.keys()],p_starts:starts.toISOString()});
  box.replaceChildren();box.append(text('h3','✓ Запись создана'),text('p',master.display_name),text('p',dateText(starts)),text('p','Сумма: '+created.total_somoni+' сомони'),text('h2','Ваш код: '+created.code),text('p','Покажите код мастеру после обслуживания. Код также доступен в разделе «Мои записи».'));
- box.append(button('Перейти в мои записи',()=>{api().show('bookings');api().bookings()}));
+ api().show('bookings');api().bookings();
  }catch(e){result.textContent='Ошибка: '+e.message;submit.disabled=false}
  });
  const availability=text('p','');let checkSeq=0;
@@ -78,7 +120,7 @@ async function openMaster(master){
  availability.textContent=ok?'✓ Время свободно. Запись подтвердится автоматически.':'Это время занято или вне графика мастера. Выберите другое.';submit.disabled=!ok
  }catch(e){if(seq===checkSeq){availability.textContent='Не удалось проверить время: '+e.message;submit.disabled=true}}};
  date.onchange=checkSlot;time.onchange=checkSlot;
- box.append(date,time,note,availability,submit,result);
+ const schedule=document.createElement('div');schedule.className='navo-profile-schedule';schedule.append(date,time);submit.className='navo-profile-submit';box.append(schedule,note,availability,submit,result);
  checkSlot();
  }catch(e){status.textContent='Ошибка загрузки услуг: '+e.message}
 }
