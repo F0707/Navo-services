@@ -1286,21 +1286,41 @@ el('btnSendResetLink').onclick=async()=>{
  catch(e){status.textContent='Ошибка отправки: '+e.message}
  finally{navoResetCooldown()}
 };
+async function navoRecoveryCall(path,payload,token,method='POST'){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+ try{
+  const response=await fetch(ROOT+path,{method,signal:controller.signal,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(payload)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(String(data.msg||data.message||data.error_description||data.error||'HTTP '+response.status));
+  return data;
+ }finally{clearTimeout(timer)}
+}
 el('ml-reset-confirm').onclick=async()=>{
  const email=el('resetEmailInput').value.trim().toLowerCase(),code=el('ml-reset-code').value.trim(),password=el('ml-reset-password').value,again=el('ml-reset-password2').value,status=el('ml-reset-status'),btn=el('ml-reset-confirm');
  if(!window.navoRecoveryToken&&!/^[0-9]{6,8}$/.test(code)){status.textContent='Введите код из письма (6–8 цифр)';return}
  if(password.length<8){status.textContent='Пароль должен содержать не менее 8 символов';return}
  if(password!==again){status.textContent='Пароли не совпадают';return}
- btn.disabled=true;status.textContent='Проверяем код…';
+ btn.disabled=true;status.textContent='Проверяем код восстановления…';
  try{
- let verified=window.navoRecoveryToken?{access_token:window.navoRecoveryToken,refresh_token:window.navoRecoveryRefreshToken}:await request('/auth/v1/verify',{type:'recovery',email,token:code});
- if(!verified.access_token)throw Error('Код подтверждён, но сервер не предоставил доступ для смены пароля');
- try{await request('/auth/v1/user',{password},verified.access_token,'PUT')}
- catch(err){if(!verified.refresh_token||!/expired|jwt|token|сессия истекла/i.test(err.message))throw err;verified=await request('/auth/v1/token?grant_type=refresh_token',{refresh_token:verified.refresh_token});await request('/auth/v1/user',{password},verified.access_token,'PUT')}
- window.navoRecoveryToken=null;window.navoRecoveryRefreshToken=null;
- el('ml-email').value=email;el('ml-password').value='';showLoginForm();el('ml-status').textContent='Пароль успешно установлен. Введите новый пароль и нажмите «Войти в кабинет мастера».';
- el('ml-reset-code').value='';el('ml-reset-password').value='';el('ml-reset-password2').value='';
- }catch(e){status.textContent=/expired|invalid|истекла|истёк|token/i.test(e.message)?'Код или ссылка недействительны либо истекли. Нажмите «Отправить ссылку для сброса» повторно после окончания таймера.':'Не удалось восстановить пароль: '+e.message}
+  let verified;
+  if(window.navoRecoveryToken){verified={access_token:window.navoRecoveryToken,refresh_token:window.navoRecoveryRefreshToken}}
+  else{
+   if(!email)throw Error('Введите электронную почту');
+   try{verified=await navoRecoveryCall('/auth/v1/verify',{type:'recovery',email,token:code})}
+   catch(e){throw Error('Проверка кода: '+e.message)}
+  }
+  if(!verified?.access_token)throw Error('Supabase не выдал токен восстановления');
+  status.textContent='Код принят. Сохраняем новый пароль…';
+  try{await navoRecoveryCall('/auth/v1/user',{password},verified.access_token,'PUT')}
+  catch(e){
+   if(!verified.refresh_token||!/expired|jwt|token/i.test(e.message))throw Error('Смена пароля: '+e.message);
+   try{verified=await navoRecoveryCall('/auth/v1/token?grant_type=refresh_token',{refresh_token:verified.refresh_token})}catch(refreshError){throw Error('Обновление сессии: '+refreshError.message)}
+   try{await navoRecoveryCall('/auth/v1/user',{password},verified.access_token,'PUT')}catch(updateError){throw Error('Смена пароля: '+updateError.message)}
+  }
+  window.navoRecoveryToken=null;window.navoRecoveryRefreshToken=null;
+  el('ml-email').value=email;el('ml-password').value='';showLoginForm();el('ml-status').textContent='Пароль обновлён. Войдите с новым паролем.';
+  el('ml-reset-code').value='';el('ml-reset-password').value='';el('ml-reset-password2').value='';
+ }catch(e){status.textContent='Не удалось восстановить пароль: '+e.message+'. Если код недействителен, запросите новый после 60 секунд.'}
  finally{btn.disabled=false}
 };
 async function navoFinishMasterSignIn(signed,email){
