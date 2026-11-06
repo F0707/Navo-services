@@ -473,10 +473,10 @@ async function submitMaster(){
  }catch(e){masterStatus('Ошибка: '+e.message);btn.disabled=false}
 }
 el('open-master-registration').onclick=()=>{show('master-register');renderMasterRegistration()};
-el('open-master-login').onclick=()=>{show('master-login');el('ml-signin-form').classList.remove('hide');el('ml-status').textContent='';el('ml-dashboard').classList.add('hide')};
+el('open-master-login').onclick=()=>{el('master-login').classList.add('navo-login-modal');show('master-login');el('ml-signin-form').classList.remove('hide');el('ml-status').textContent='';el('ml-dashboard').classList.add('hide')};
 el('navo-specialist-entry').onclick=()=>el('open-master-login').click();
 const navoModal=el('master-login');navoModal.classList.add('navo-login-modal');
-const navoModalClose=document.createElement('button');navoModalClose.type='button';navoModalClose.className='secondary full';navoModalClose.textContent='Отмена';navoModalClose.addEventListener('click',()=>{show('catalog');catalog()});el('ml-signin-form').append(navoModalClose);
+const navoModalClose=document.createElement('button');navoModalClose.type='button';navoModalClose.className='secondary full';navoModalClose.textContent='Отмена';navoModalClose.addEventListener('click',()=>{el('master-login').classList.remove('navo-login-modal');show('catalog');catalog()});el('ml-signin-form').append(navoModalClose);
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-toggle-password]');if(!b)return;const input=el(b.dataset.togglePassword);if(!input)return;const showing=input.type==='password';input.type=showing?'text':'password';b.setAttribute('aria-pressed',String(showing));b.setAttribute('aria-label',showing?'Скрыть пароль':'Показать пароль');b.textContent=showing?'🙈':'👁'});
 let masterSession=null,masterProfile=null,masterEmailPending='';
@@ -537,7 +537,7 @@ async function masterEditLoad(){
 }
 async function masterOpen(signed,p){
  if(!signed?.access_token||!signed?.user?.id||String(p?.user_id)!==String(signed.user.id)){show('catalog');throw Error('Доступ мастера запрещён: требуется подтверждённый вход в собственный аккаунт')}
- sessionStorage.setItem('master_authenticated','true');masterSession=signed;masterProfile=p;sessionStorage.setItem('navo-view-mode','master');if(signed?.access_token)save({...signed,user:signed.user||auth?.user});el('ml-dashboard').classList.remove('hide');show('master-login');el('inside').classList.add('navo-master-view');el('ml-signin-form').classList.add('hide');el('ml-dashboard').classList.remove('hide');el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address+' · '+p.status;masterTab('upcoming');
+ sessionStorage.setItem('master_authenticated','true');el('master-login').classList.remove('navo-login-modal');masterSession=signed;masterProfile=p;sessionStorage.setItem('navo-view-mode','master');if(signed?.access_token)save({...signed,user:signed.user||auth?.user});el('ml-dashboard').classList.remove('hide');show('master-login');el('inside').classList.add('navo-master-view');el('ml-signin-form').classList.add('hide');el('ml-dashboard').classList.remove('hide');el('ml-profile-info').textContent=p.full_name+' · '+p.city+' · '+p.work_address+' · '+p.status;masterTab('upcoming');
  try{await Promise.all([masterBookings(),masterEditLoad()])}catch(e){mstatus('md-today-status','Ошибка загрузки: '+e.message)}
 }
 el('md-photo').onchange=()=>{const f=el('md-photo').files[0];if(f){el('md-photo-preview').src=URL.createObjectURL(f);el('md-photo-preview').style.display='block'}};
