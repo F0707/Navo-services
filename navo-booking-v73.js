@@ -162,8 +162,26 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  return details
 }
 let clientRenderRunning=false,clientRenderQueued=false;
+let cachedBookings=null,cachedBookingUser=null;
 window.navoChatPanel=chatPanel;
-async function clientCards(){if(clientRenderRunning){clientRenderQueued=true;return}clientRenderRunning=true;try{await renderClientCards()}finally{clientRenderRunning=false;if(clientRenderQueued){clientRenderQueued=false;clientCards().catch(console.error)}}}
+async function clientCards(force=false){
+ const uid=api()?.getAuth?.()?.user?.id;
+ if(!uid)return;
+ const box=$('bookings-items'),status=$('bookings-status');
+ if(cachedBookingUser!==uid){cachedBookings=null;cachedBookingUser=uid;if(box)box.replaceChildren()}
+ if(cachedBookings&&!force){
+  if(status)status.textContent='';
+  // Existing DOM is the in-memory cache: no blocking Supabase call or redraw.
+  get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(uid)+'&order=starts_at.desc&limit=100')
+   .then(rows=>{const fingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));if(fingerprint!==cachedBookings&&$('bookings')&&!$('bookings').classList.contains('hide'))clientCards(true).catch(console.error)})
+   .catch(console.warn);
+  return;
+ }
+ if(clientRenderRunning){clientRenderQueued=true;return}
+ clientRenderRunning=true;
+ try{await renderClientCards();cachedBookings=box?.dataset.bookingFingerprint||'[]';if(status)status.textContent=''}
+ finally{clientRenderRunning=false;if(clientRenderQueued){clientRenderQueued=false;clientCards(true).catch(console.error)}}
+}
 function navoTimeBadge(iso){
  const wrap=document.createElement('div');wrap.className='navo-time-badge';
  const heading=text('div','Дата и время');heading.className='navo-time-heading';
@@ -180,7 +198,7 @@ async function renderClientCards(){
  const box=$('bookings-items');if(!box)return;
  const user=api().getAuth()?.user;if(!user)return;
  const rawRows=await get('/rest/v1/bookings?select=id,master_id,starts_at,status,total_somoni&client_id=eq.'+encodeURIComponent(user.id)+'&order=starts_at.desc&limit=100');const rows=[...new Map(rawRows.map(b=>[b.id,b])).values()];
- box.replaceChildren();if(!rows.length){box.append(text('p','У вас пока нет записей'));return}
+ box.dataset.bookingFingerprint=JSON.stringify(rows.map(b=>[b.id,b.starts_at,b.status,b.total_somoni]));box.replaceChildren();if(!rows.length){box.append(text('p','У вас пока нет записей'));return}
  const masters=await get('/rest/v1/navo_test_master_catalog?select=master_id,display_name,city,work_address,photo_url,phone&limit=100');const masterMap=new Map(masters.map(m=>[m.master_id,m]));
  for(const b of rows){
  const card=document.createElement('div');card.className='item navo-booking-tile bg-white rounded-2xl p-4 border-2 border-emerald-600/20 shadow-sm space-y-3 mb-3';card.dataset.bookingCard=b.id;
@@ -197,16 +215,16 @@ async function renderClientCards(){
  const currentDate=new Date(b.starts_at);const fmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dushanbe',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(currentDate).replace(' ','T');
  const {date,time}=dateTimeControls(fmt.slice(0,10),fmt.slice(11,16));
  const feedback=text('p','');
- const save=button('Сохранить новое время',async()=>{try{if(!date.value||!time.value)throw Error('Выберите дату и время');const dt=new Date(date.value+'T'+time.value+':00+05:00');if(!Number.isFinite(dt.getTime()))throw Error('Некорректная дата');save.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'reschedule',p_starts:dt.toISOString()});await clientCards()}catch(e){feedback.textContent='Ошибка: '+e.message;save.disabled=false}});
+ const save=button('Сохранить новое время',async()=>{try{if(!date.value||!time.value)throw Error('Выберите дату и время');const dt=new Date(date.value+'T'+time.value+':00+05:00');if(!Number.isFinite(dt.getTime()))throw Error('Некорректная дата');save.disabled=true;await rpc('navo_manage_booking',{p_booking:b.id,p_action:'reschedule',p_starts:dt.toISOString()});await clientCards(true)}catch(e){feedback.textContent='Ошибка: '+e.message;save.disabled=false}});
  form.append(text('p','Новая дата'),date,text('p','Новое время'),time,save,feedback);
- const cancel=button('Отменить запись',async()=>{try{cancel.disabled=true;cancel.textContent='Отменяем запись…';await rpc('navo_manage_booking',{p_booking:b.id,p_action:'cancel'});await clientCards()}catch(e){feedback.textContent='Ошибка отмены: '+e.message;cancel.disabled=false;cancel.textContent='Отменить запись'}});
+ const cancel=button('Отменить запись',async()=>{try{cancel.disabled=true;cancel.textContent='Отменяем запись…';await rpc('navo_manage_booking',{p_booking:b.id,p_action:'cancel'});await clientCards(true)}catch(e){feedback.textContent='Ошибка отмены: '+e.message;cancel.disabled=false;cancel.textContent='Отменить запись'}});
  cancel.className='secondary full';const changes=document.createElement('div');changes.append(edit,form,cancel);const actions=document.createElement('div');actions.className='navo-booking-actions';const chatBtn=button('💬 Чат с мастером',()=>{chat.open=true});chatBtn.className='secondary';actions.append(chatBtn);{const call=document.createElement('a');call.href=master?.phone?'tel:'+String(master.phone).replace(/[^+\d]/g,''):'#';call.className='navo-booking-call';call.textContent='📞 Позвонить';if(!master?.phone){call.setAttribute('aria-disabled','true');call.onclick=e=>e.preventDefault()}actions.append(call)}const changeBtn=button('Отменить запись',()=>{changes.hidden=!changes.hidden});changeBtn.className='secondary';changes.hidden=true;actions.append(changeBtn);detail.append(actions,changes)
  }
  if(b.status==='completed'){
  const reviews=await get('/rest/v1/navo_reviews?select=stars&booking_id=eq.'+b.id);
  if(reviews.length)detail.append(text('p','Ваша оценка: '+('★'.repeat(reviews[0].stars))));else{
  const row=document.createElement('div');row.append(text('p','Оцените мастера:'));
- for(let n=1;n<=5;n++){const star=button(n+' ★',async()=>{try{await rpc('navo_rate_booking',{p_booking:b.id,p_stars:n});await clientCards()}catch(e){alert(e.message)}});star.style.cssText='width:18%;display:inline-block;margin-right:1%;padding:10px 0';row.append(star)}detail.append(row)
+ for(let n=1;n<=5;n++){const star=button(n+' ★',async()=>{try{await rpc('navo_rate_booking',{p_booking:b.id,p_stars:n});await clientCards(true)}catch(e){alert(e.message)}});star.style.cssText='width:18%;display:inline-block;margin-right:1%;padding:10px 0';row.append(star)}detail.append(row)
  }}
  box.append(card)
  }
@@ -270,5 +288,5 @@ async function setupMasterSchedule(){
  const data=rows[0]||{working_days:[1,2,3,4,5,6,7],start_time:'09:00',end_time:'20:00'};
  const {checks,start,end}=area._scheduleFields;for(const cb of checks)cb.checked=data.working_days.includes(Number(cb.value));start.value=data.start_time.slice(0,5);end.value=data.end_time.slice(0,5);
 }
-document.addEventListener('DOMContentLoaded',()=>{setInterval(()=>updateBookingUnread().catch(console.error),15000);attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>setTimeout(()=>clientCards().catch(console.error),150));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>{setTimeout(()=>masterCards().catch(console.error),200);setupMasterSchedule().catch(console.error)});window.addEventListener('navo-master-bookings-loaded',()=>{masterCards().catch(console.error);setupMasterSchedule().catch(console.error)});});
+document.addEventListener('DOMContentLoaded',()=>{setInterval(()=>updateBookingUnread().catch(console.error),15000);attachMasterCards();$('tab-bookings')?.addEventListener('click',()=>clientCards().catch(console.error));window.addEventListener('navo-client-bookings-loaded',()=>clientCards().catch(e=>{const x=$('bookings-status');if(x)x.textContent='Ошибка отображения записи: '+e.message}));window.addEventListener('navo-master-open',()=>{setTimeout(()=>masterCards().catch(console.error),200);setupMasterSchedule().catch(console.error)});window.addEventListener('navo-master-bookings-loaded',()=>{masterCards().catch(console.error);setupMasterSchedule().catch(console.error)});});
 })();
