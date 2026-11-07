@@ -1193,11 +1193,10 @@ function navoProfileCards(){
   try{
    const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(masterSession.user.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({work_schedule:{days,start,end}})});
    const data=await res.json().catch(()=>[]);if(!res.ok||!Array.isArray(data)||!data.length)throw Error(data.message||'Сервер не сохранил расписание');
-   masterProfile={...masterProfile,...data[0]};el('navo-profile-panel-message').textContent='✓ Расписание сохранено';navoProfileRefresh();
+   masterProfile={...masterProfile,...data[0]};el('navo-profile-modal-schedule').querySelector('.navo-profile-message').textContent='✓ Расписание сохранено';navoProfileRefresh();
   }catch(e){el('navo-profile-panel-message').textContent='Не сохранено: '+e.message+'. Необходимо поле work_schedule в Supabase.'}finally{btn.disabled=false}
  };
- const gallery=el('md-portfolio-preview');if(gallery){const removeBar=document.createElement('div');removeBar.id='navo-profile-gallery-actions';gallery.after(removeBar);const refreshRemove=()=>{removeBar.replaceChildren();(masterProfile?.portfolio_urls||[]).forEach((url,i)=>{const btn=document.createElement('button');btn.type='button';btn.textContent='Удалить фото '+(i+1);btn.onclick=async()=>{if(!confirm('Удалить фото из галереи?'))return;const next=(masterProfile.portfolio_urls||[]).filter((_,j)=>j!==i);const r=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(masterSession.user.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({portfolio_urls:next})});if(!r.ok){alert('Не удалось удалить фото');return}masterProfile.portfolio_urls=next;await masterEditLoad();refreshRemove();navoProfileRefresh()};removeBar.append(btn)})};window.navoProfileRefreshGallery=refreshRemove}
- const servicesSave=document.createElement('button');servicesSave.className='primary full';servicesSave.textContent='Сохранить услуги';servicesSave.onclick=()=>save?.click();panels.services.append(servicesSave);
+
 }
 function navoProfilePanel(key){
  document.querySelectorAll('.navo-profile-modal').forEach(modal=>{const active=modal.id==='navo-profile-modal-'+key;modal.hidden=!active;modal.classList.toggle('hidden',!active)});
