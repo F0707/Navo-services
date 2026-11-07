@@ -1156,19 +1156,87 @@ function navoBookingPeriod(period){
 el('navo-bookings-segments')?.addEventListener('click',e=>{const btn=e.target.closest('button[data-period]');if(btn)navoBookingPeriod(btn.dataset.period)});
 function navoProfileCards(){
  const profile=el('md-profile');if(!profile||profile.dataset.cardsReady)return;
- profile.dataset.cardsReady='1';
- const sections=[['Личные данные',['md-name','md-phone','md-city','md-address','md-district','md-landmark','md-experience','md-photo','md-photo-preview']],['Альбом работ',['md-portfolio','md-portfolio-preview']],['Услуги и прайс-лист',['md-services']],['Кошелёк',[]]];
- for(const [heading,ids] of sections){
-  const card=document.createElement('section');card.className='navo-master-profile-card';const h=document.createElement('h3');h.textContent=heading;card.append(h);
-  for(const id of ids){const field=el(id);if(!field)continue;const prev=field.previousElementSibling;if(prev?.tagName==='LABEL')card.append(prev);card.append(field)}
-  if(heading==='Услуги и прайс-лист'){for(const id of ['md-save','md-save-status']){const node=el(id);if(node)card.append(node)}}
-  if(heading==='Кошелёк'){const wallet=profile.querySelector('.navo-wallet-section');if(wallet)card.append(wallet);const logout=el('navo-master-logout');if(logout)card.append(logout)}
-  profile.append(card);
+ profile.dataset.cardsReady='1';profile.classList.add('navo-profile-fields');
+ const panels={};
+ for(const [key,ids] of Object.entries({
+  personal:['md-name','md-phone','md-city','md-district','md-address','md-landmark','md-experience','md-photo','md-photo-preview'],
+  gallery:['md-portfolio','md-portfolio-selection','md-portfolio-preview'],
+  services:['md-services'],
+  wallet:[],
+  security:['md-password-open','md-password-panel','md-new-email','md-send-email','md-email-code','md-verify-email','md-email-status']
+ })){
+  const section=document.createElement('section');section.className='navo-profile-detail';section.dataset.panel=key;
+  for(const id of ids){const node=el(id);if(!node)continue;const prev=node.previousElementSibling;if(prev?.tagName==='LABEL'&&prev.parentElement===profile)section.append(prev);section.append(node)}
+  if(key==='wallet'){const wallet=profile.querySelector('.navo-wallet-section');if(wallet)section.append(wallet)}
+  if(key==='security'){for(const id of ['md-password-save','md-password-status']){const node=el(id);if(node&&!section.contains(node))section.append(node)}}
+  panels[key]=section;
  }
- const schedule=document.createElement('section');schedule.className='navo-master-profile-card';schedule.innerHTML='<h3>График работы</h3><p class="muted">Расписание мастера и доступные часы редактируются в разделе записей.</p><button class="secondary full" type="button" id="navo-profile-schedule">Открыть расписание</button>';profile.insertBefore(schedule,profile.querySelectorAll('.navo-master-profile-card')[1]||null);
- el('navo-profile-schedule').onclick=()=>navoMasterView('bookings');
+ // Keep the existing Supabase save handler and service selection shared across sections.
+ const save=el('md-save'),status=el('md-save-status');
+ if(save)panels.personal.append(save);if(status)panels.personal.append(status);
+ const screen=document.createElement('div');screen.id='navo-master-profile-screen';
+ screen.innerHTML='<h2>Профиль мастера</h2><div class="navo-profile-identity"><img id="navo-profile-avatar" alt="Фото мастера"><strong id="navo-profile-display-name">Мастер</strong><span id="navo-profile-rating">★ — (0 отзывов)</span><span id="navo-profile-review-status">На проверке</span></div><div class="navo-profile-shift"><span id="navo-shift-label">🟢 На смене (Принимаю записи)</span><button type="button" id="navo-emergency-dayoff">Экстренный выходной</button></div><div id="navo-profile-menu"></div><button type="button" id="navo-profile-logout">Выйти из аккаунта мастера ↪</button><div id="navo-profile-subscreen" class="hide"><button type="button" id="navo-profile-back">‹ Назад к профилю</button><h3 id="navo-profile-panel-title"></h3><div id="navo-profile-panel-body"></div><p id="navo-profile-panel-message" role="status"></p></div>';
+ const menu=screen.querySelector('#navo-profile-menu');
+ const items=[['personal','👤','Личные данные и локация'],['schedule','📅','График и рабочие часы'],['gallery','📸','Альбом причёсок и работ'],['services','✂️','Мои услуги и прайс-лист'],['wallet','👛','Кошелёк и подписка'],['security','🔐','Пароль и электронная почта']];
+ for(const [key,icon,label] of items){const btn=document.createElement('button');btn.type='button';btn.className='navo-profile-menu-item';btn.dataset.panel=key;btn.innerHTML='<span class="navo-profile-icon">'+icon+'</span><span class="navo-profile-item-text"><strong>'+label+'</strong><small id="navo-profile-summary-'+key+'"></small></span><span class="navo-profile-chevron">›</span>';btn.onclick=()=>navoProfilePanel(key,label);menu.append(btn)}
+ const schedule=document.createElement('section');schedule.className='navo-profile-detail';schedule.dataset.panel='schedule';
+ schedule.innerHTML='<p>Выберите дни и рабочие часы. Расписание сохраняется в профиле мастера, если сервер поддерживает поле расписания.</p><div id="navo-profile-weekdays"></div><label for="navo-schedule-from">Начало</label><input id="navo-schedule-from" type="time" value="09:00"><label for="navo-schedule-to">Конец</label><input id="navo-schedule-to" type="time" value="20:00"><button type="button" id="navo-schedule-save" class="primary full">Сохранить расписание</button>';
+ const weekdays=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];for(let i=0;i<7;i++){const button=document.createElement('button');button.type='button';button.textContent=weekdays[i];button.className='navo-weekday'+(i<6?' selected':'');button.dataset.day=i;button.setAttribute('aria-pressed',String(i<6));button.onclick=()=>{button.classList.toggle('selected');button.setAttribute('aria-pressed',String(button.classList.contains('selected')))};schedule.querySelector('#navo-profile-weekdays').append(button)}
+ panels.schedule=schedule;
+ for(const node of Object.values(panels))profile.append(node);
+ profile.append(screen);
+ const oldLogout=el('navo-master-logout');if(oldLogout)oldLogout.hidden=true;
+ el('navo-profile-logout').onclick=()=>oldLogout?.click();
+ el('navo-profile-back').onclick=()=>navoProfilePanel(null);
+ el('navo-emergency-dayoff').onclick=async()=>{
+  if(!masterSession?.user?.id||!masterProfile)return;
+  if(!confirm('Отменить доступность для новых записей на сегодня?'))return;
+  const btn=el('navo-emergency-dayoff');btn.disabled=true;
+  try{
+   const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(masterSession.user.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({is_available_today:false})});
+   const data=await res.json().catch(()=>[]);if(!res.ok||!Array.isArray(data)||!data.length)throw Error(data.message||'Сервер не подтвердил изменение доступности');
+   masterProfile={...masterProfile,...data[0]};el('navo-shift-label').textContent='🔴 Сегодня выходной';btn.textContent='Выходной установлен';btn.disabled=true;
+  }catch(e){alert('Не удалось включить выходной: '+e.message+'. Нужна поддержка поля и проверка бронирований в Supabase.');btn.disabled=false}
+ };
+ el('navo-schedule-save').onclick=async()=>{
+  const days=[...el('navo-profile-weekdays').querySelectorAll('.selected')].map(x=>Number(x.dataset.day));
+  const start=el('navo-schedule-from').value,end=el('navo-schedule-to').value;
+  if(!start||!end||start>=end){el('navo-profile-panel-message').textContent='Проверьте рабочие часы';return}
+  const btn=el('navo-schedule-save');btn.disabled=true;
+  try{
+   const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(masterSession.user.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({work_schedule:{days,start,end}})});
+   const data=await res.json().catch(()=>[]);if(!res.ok||!Array.isArray(data)||!data.length)throw Error(data.message||'Сервер не сохранил расписание');
+   masterProfile={...masterProfile,...data[0]};el('navo-profile-panel-message').textContent='✓ Расписание сохранено';navoProfileRefresh();
+  }catch(e){el('navo-profile-panel-message').textContent='Не сохранено: '+e.message+'. Необходимо поле work_schedule в Supabase.'}finally{btn.disabled=false}
+ };
+ const gallery=el('md-portfolio-preview');if(gallery){const removeBar=document.createElement('div');removeBar.id='navo-profile-gallery-actions';gallery.after(removeBar);const refreshRemove=()=>{removeBar.replaceChildren();(masterProfile?.portfolio_urls||[]).forEach((url,i)=>{const btn=document.createElement('button');btn.type='button';btn.textContent='Удалить фото '+(i+1);btn.onclick=async()=>{if(!confirm('Удалить фото из галереи?'))return;const next=(masterProfile.portfolio_urls||[]).filter((_,j)=>j!==i);const r=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(masterSession.user.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({portfolio_urls:next})});if(!r.ok){alert('Не удалось удалить фото');return}masterProfile.portfolio_urls=next;await masterEditLoad();refreshRemove();navoProfileRefresh()};removeBar.append(btn)})};window.navoProfileRefreshGallery=refreshRemove}
+ const servicesSave=document.createElement('button');servicesSave.className='primary full';servicesSave.textContent='Сохранить услуги';servicesSave.onclick=()=>save?.click();panels.services.append(servicesSave);
 }
-
+function navoProfilePanel(key,label){
+ const screen=el('navo-master-profile-screen');if(!screen)return;
+ const sub=el('navo-profile-subscreen'),body=el('navo-profile-panel-body');
+ if(!key){sub.classList.add('hide');screen.classList.remove('navo-profile-detail-open');return}
+ const panel=el('md-profile')?.querySelector('.navo-profile-detail[data-panel="'+key+'"]');if(!panel)return;
+ body.replaceChildren();body.append(panel);el('navo-profile-panel-title').textContent=label;el('navo-profile-panel-message').textContent='';
+ sub.classList.remove('hide');screen.classList.add('navo-profile-detail-open');
+ if(key==='gallery')window.navoProfileRefreshGallery?.();
+}
+function navoProfileRefresh(){
+ const p=masterProfile;if(!p)return;
+ const put=(id,value)=>{const n=el(id);if(n)n.textContent=value};
+ put('navo-profile-display-name',p.full_name||'Мастер');
+ put('navo-profile-review-status',p.status==='approved'?'Подтверждён':p.status==='rejected'?'Отклонён':'На проверке');
+ const img=el('navo-profile-avatar');if(img){img.hidden=!p.photo_url;if(p.photo_url)img.src=p.photo_url}
+ put('navo-profile-summary-personal',[p.full_name,p.work_address,p.work_landmark?'ор-р '+p.work_landmark:''].filter(Boolean).join(' · '));
+ const sc=p.work_schedule;if(sc?.days){const buttons=el('navo-profile-weekdays')?.querySelectorAll('button');buttons?.forEach(b=>{const selected=sc.days.includes(Number(b.dataset.day));b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected))});el('navo-schedule-from').value=sc.start||'09:00';el('navo-schedule-to').value=sc.end||'20:00'}
+ put('navo-profile-summary-schedule',sc?.days?sc.start+'–'+sc.end:'Настроить рабочие часы');
+ put('navo-profile-summary-gallery',(p.portfolio_urls?.length||0)+' фото в галерее');
+ put('navo-profile-summary-services',(p.services?.length||0)+' услуг выбрано');
+ put('navo-profile-summary-wallet','Баланс — после подключения платежей');
+ put('navo-profile-summary-security','Настройки безопасности');
+ put('navo-shift-label',p.is_available_today===false?'🔴 Сегодня выходной':'🟢 На смене (Принимаю записи)');
+ const emergency=el('navo-emergency-dayoff');if(emergency){emergency.disabled=p.is_available_today===false;emergency.textContent=p.is_available_today===false?'Выходной установлен':'Экстренный выходной'}
+}
 try{navoProfileCards()}catch(error){console.error('NAVO profile layout initialization',error)}
 function navoMasterLayout(){
  const root=el('ml-dashboard');if(!root||el('masterView'))return;
@@ -1206,7 +1274,7 @@ function navoMasterView(view){
  el('masterBottomNav')?.querySelectorAll('button').forEach(b=>{b.classList.toggle('text-emerald-700',b.dataset.view===view);b.classList.toggle('text-gray-400',b.dataset.view!==view)});
  if(view==='chats'){const inbox=el('md-inbox');if(inbox)inbox.classList.remove('hide');}
  if(view==='bookings'){window.dispatchEvent(new Event('navo-master-bookings-loaded'));}
- if(view==='home')navoLoadMasterOverview().catch(console.warn);
+ if(view==='home')navoLoadMasterOverview().catch(console.warn);if(view==='profile'){navoProfilePanel(null);navoProfileRefresh()}
 }
 async function navoLoadMasterOverview(){
  if(!masterSession?.user?.id||!masterProfile)return;
@@ -1337,7 +1405,7 @@ el('md-save').onclick=async()=>{
   row.portfolio_urls=portfolioUrls;
   const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(uid),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(row)});
   const data=await res.json().catch(()=>[]);if(!res.ok)throw Error(data.message||'Ошибка сохранения '+res.status);if(!data.length)throw Error('Редактирование этой анкеты пока ограничено её статусом');
-  masterProfile={...p,...data[0]};el('md-portfolio').value='';masterEditLoad().catch(console.error);window.dispatchEvent(new Event('navo-master-saved'));mstatus('md-save-status','✓ Изменения сохранены');if(el('ml-profile-info'))el('ml-profile-info').textContent=masterProfile.full_name+' · '+masterProfile.city+' · '+masterProfile.work_address;
+  masterProfile={...p,...data[0]};navoProfileRefresh();el('md-portfolio').value='';masterEditLoad().catch(console.error);window.dispatchEvent(new Event('navo-master-saved'));mstatus('md-save-status','✓ Изменения сохранены');if(el('ml-profile-info'))el('ml-profile-info').textContent=masterProfile.full_name+' · '+masterProfile.city+' · '+masterProfile.work_address;
  }catch(e){mstatus('md-save-status','Ошибка: '+e.message)}finally{btn.disabled=false}
 };
 el('md-send-email').onclick=async()=>{
@@ -1553,4 +1621,21 @@ window.addEventListener('navo-master-open',()=>setTimeout(refreshNavoFees,350));
 #masterHomeTab button{width:auto;min-height:unset;margin:0;line-height:1.35;cursor:pointer}#masterHomeTab #btnAddNewBooking{width:100%}#masterHomeTab .mt-0\.5{margin-top:2px}#masterHomeTab .mt-1{margin-top:4px}
 #masterBottomNav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:448px;display:grid;grid-template-columns:repeat(4,1fr);background:#fffffff2;border-top:1px solid #e5e7eb;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:12001;box-shadow:0 -2px 12px #0001}#masterBottomNav[hidden]{display:none!important}#masterBottomNav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;font-size:10px;padding:4px;color:#9ca3af}#masterBottomNav button.text-emerald-700{color:#047857}#masterBottomNav svg{width:20px;height:20px}
 #navo-master-bottom-nav{display:none!important}#ml-dashboard .navo-master-topline,#ml-dashboard>.navo-master-head,#ml-dashboard>.navo-master-metrics,#ml-dashboard>#md-home,#ml-dashboard>#md-general-view{display:none!important}
+</style><style id="navo-profile-modular-style">
+#masterProfileTab{background:#f8f9fa;min-height:100dvh;padding:18px 16px 110px;max-width:448px;margin:auto;color:#17201d}
+#masterProfileTab #md-profile{display:block!important}
+#masterProfileTab #md-profile>h3,#masterProfileTab #md-profile>.navo-profile-detail,#masterProfileTab #md-profile>#navo-master-logout{display:none!important}
+#navo-master-profile-screen{font-family:system-ui,sans-serif}
+#navo-master-profile-screen>h2{font-size:25px;font-weight:800;margin:4px 0 24px;color:#151a18}
+.navo-profile-identity{display:flex;flex-direction:column;align-items:center;gap:5px;margin:0 0 24px}
+.navo-profile-identity img{width:82px;height:82px;border-radius:50%;object-fit:cover}
+.navo-profile-identity strong{font-size:21px}.navo-profile-identity>span:nth-of-type(1){color:#c38c2b;font-size:14px}.navo-profile-identity>span:nth-of-type(2){background:#fff2d7;color:#926a24;padding:4px 12px;border-radius:8px;font-size:12px}
+.navo-profile-shift{display:flex;align-items:center;justify-content:space-between;gap:8px;background:white;border-radius:18px;padding:16px 13px;margin-bottom:22px;box-shadow:0 5px 17px #182a2210}
+#navo-shift-label{font-size:14px;line-height:1.35}#navo-emergency-dayoff{width:auto!important;min-height:40px;padding:8px;border:1px solid #e5b8a9;background:#fffaf7;color:#a56550;font-size:12px;border-radius:12px}
+#navo-profile-menu{display:grid;gap:11px}
+#navo-profile-menu .navo-profile-menu-item{display:flex;align-items:center;gap:15px;width:100%;min-height:76px;padding:12px 16px;border:1px solid #f0f2f0;border-radius:18px;background:white;box-shadow:0 5px 15px #17201d12;text-align:left;color:#17201d}
+.navo-profile-icon{font-size:24px;min-width:32px}.navo-profile-item-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}.navo-profile-item-text strong{font-size:15px;font-weight:650}.navo-profile-item-text small{font-size:12px;color:#69736f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.navo-profile-chevron{font-size:26px;color:#56625e}
+#navo-profile-logout{display:block;width:100%;background:transparent;border:0;color:#aa3333;font-size:15px;padding:25px 8px}
+#navo-master-profile-screen.navo-profile-detail-open>h2,#navo-master-profile-screen.navo-profile-detail-open>.navo-profile-identity,#navo-master-profile-screen.navo-profile-detail-open>.navo-profile-shift,#navo-master-profile-screen.navo-profile-detail-open>#navo-profile-menu,#navo-master-profile-screen.navo-profile-detail-open>#navo-profile-logout{display:none}
+#navo-profile-subscreen{padding:8px 0 30px}#navo-profile-subscreen.hide{display:none!important}#navo-profile-back{width:auto;background:none;border:0;color:#047857;font-size:14px;padding:10px 0}#navo-profile-panel-title{font-size:21px;margin:12px 0 20px}#navo-profile-panel-body .navo-profile-detail{display:block!important;background:white;border-radius:18px;padding:16px}#navo-profile-panel-body input,#navo-profile-panel-body select{max-width:100%}#navo-profile-weekdays{display:flex;gap:4px;justify-content:space-between;margin:16px 0}#navo-profile-weekdays button{min-width:0;width:13%;padding:9px 0;background:#f1f4f2;border:1px solid #dce4df;border-radius:10px;font-size:12px}#navo-profile-weekdays button.selected{background:#047857;color:white}#navo-profile-gallery-actions{display:flex;flex-wrap:wrap;gap:6px}#navo-profile-gallery-actions button{width:auto;background:#fff2f0;color:#a33;border:1px solid #f5d5d1;border-radius:8px;padding:6px;font-size:12px}
 </style></body></html>
