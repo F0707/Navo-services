@@ -1633,4 +1633,16 @@ window.addEventListener('navo-master-open',()=>setTimeout(refreshNavoFees,350));
 #navo-profile-gallery-actions{display:flex;flex-wrap:wrap;gap:6px}#navo-profile-gallery-actions button{width:auto!important;padding:6px!important}
 body.navo-modal-open{overflow:hidden}
 @media(max-width:380px){#masterProfileTab{padding-left:12px!important;padding-right:12px!important}#navo-profile-menu .navo-profile-menu-item{padding:12px!important;gap:10px!important}}
+</style><style id="navo-profile-mobile-width-correction">
+/* Mobile width: prevent inherited master-dashboard padding and narrow content columns. */
+@media(max-width:600px){
+ body:has(#masterProfileTab:not(.hide)) main{max-width:none!important;width:100%!important;padding-left:0!important;padding-right:0!important}
+ body:has(#masterProfileTab:not(.hide)) #ml-dashboard{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#f8f9fa!important}
+ body:has(#masterProfileTab:not(.hide)) #masterView{box-sizing:border-box!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important}
+ body:has(#masterProfileTab:not(.hide)) #masterProfileTab{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;padding:20px 16px 105px!important}
+ body:has(#masterProfileTab:not(.hide)) #md-profile{width:100%!important;max-width:none!important}
+ body:has(#masterProfileTab:not(.hide)) #navo-master-profile-screen{width:100%!important;max-width:none!important}
+ body:has(#masterProfileTab:not(.hide)) #navo-profile-menu{width:100%!important}
+ body:has(#masterProfileTab:not(.hide)) #navo-profile-menu .navo-profile-menu-item{width:100%!important;min-height:72px!important}
+}
 </style></body></html>
