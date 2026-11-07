@@ -1185,6 +1185,10 @@ function navoProfileCards(){
  panels.schedule=schedule;
  for(const node of Object.values(panels))profile.append(node);
  profile.append(screen);
+ // Hide all legacy direct children: only the six-card screen is visible on the profile landing page.
+ for(const child of [...profile.children])if(child!==screen){child.classList.add('navo-profile-legacy-hidden');if(child.id!=='navo-master-logout'&&!child.classList.contains('navo-profile-detail')){const security=panels.security;if(child.id==='md-confirm-email'||child.id==='md-email-status')security.append(child)}}
+ // Move the original email confirmation control into the security sub-screen.
+ if(el('md-confirm-email'))panels.security.append(el('md-confirm-email'));
  const oldLogout=el('navo-master-logout');if(oldLogout)oldLogout.hidden=true;
  el('navo-profile-logout').onclick=()=>oldLogout?.click();
  el('navo-profile-back').onclick=()=>navoProfilePanel(null);
@@ -1274,7 +1278,7 @@ function navoMasterView(view){
  el('masterBottomNav')?.querySelectorAll('button').forEach(b=>{b.classList.toggle('text-emerald-700',b.dataset.view===view);b.classList.toggle('text-gray-400',b.dataset.view!==view)});
  if(view==='chats'){const inbox=el('md-inbox');if(inbox)inbox.classList.remove('hide');}
  if(view==='bookings'){window.dispatchEvent(new Event('navo-master-bookings-loaded'));}
- if(view==='home')navoLoadMasterOverview().catch(console.warn);if(view==='profile'){navoProfilePanel(null);navoProfileRefresh()}
+ if(view==='home')navoLoadMasterOverview().catch(console.warn);if(view==='profile'){navoProfilePanel(null);navoProfileRefresh();el('masterProfileTab')?.scrollTo(0,0)}
 }
 async function navoLoadMasterOverview(){
  if(!masterSession?.user?.id||!masterProfile)return;
@@ -1638,4 +1642,21 @@ window.addEventListener('navo-master-open',()=>setTimeout(refreshNavoFees,350));
 #navo-profile-logout{display:block;width:100%;background:transparent;border:0;color:#aa3333;font-size:15px;padding:25px 8px}
 #navo-master-profile-screen.navo-profile-detail-open>h2,#navo-master-profile-screen.navo-profile-detail-open>.navo-profile-identity,#navo-master-profile-screen.navo-profile-detail-open>.navo-profile-shift,#navo-master-profile-screen.navo-profile-detail-open>#navo-profile-menu,#navo-master-profile-screen.navo-profile-detail-open>#navo-profile-logout{display:none}
 #navo-profile-subscreen{padding:8px 0 30px}#navo-profile-subscreen.hide{display:none!important}#navo-profile-back{width:auto;background:none;border:0;color:#047857;font-size:14px;padding:10px 0}#navo-profile-panel-title{font-size:21px;margin:12px 0 20px}#navo-profile-panel-body .navo-profile-detail{display:block!important;background:white;border-radius:18px;padding:16px}#navo-profile-panel-body input,#navo-profile-panel-body select{max-width:100%}#navo-profile-weekdays{display:flex;gap:4px;justify-content:space-between;margin:16px 0}#navo-profile-weekdays button{min-width:0;width:13%;padding:9px 0;background:#f1f4f2;border:1px solid #dce4df;border-radius:10px;font-size:12px}#navo-profile-weekdays button.selected{background:#047857;color:white}#navo-profile-gallery-actions{display:flex;flex-wrap:wrap;gap:6px}#navo-profile-gallery-actions button{width:auto;background:#fff2f0;color:#a33;border:1px solid #f5d5d1;border-radius:8px;padding:6px;font-size:12px}
+</style><style id="navo-profile-width-fix">
+/* The old inline form is not a second profile screen. Only the modular menu and its active panel render. */
+#masterProfileTab #md-profile>.navo-profile-legacy-hidden{display:none!important}
+#masterProfileTab #md-profile>#navo-master-profile-screen{display:block!important}
+#masterProfileTab{box-sizing:border-box;width:100%;max-width:560px;padding:20px 20px 112px!important}
+#navo-master-profile-screen{width:100%;max-width:520px;margin:0 auto}
+#navo-profile-menu{gap:14px!important}
+#navo-profile-menu .navo-profile-menu-item{min-height:88px!important;padding:16px 18px!important;border-radius:20px!important}
+#navo-profile-menu .navo-profile-item-text strong{font-size:16px!important}
+#navo-profile-menu .navo-profile-item-text small{font-size:13px!important}
+#navo-profile-panel-body{width:100%;min-width:0}
+#navo-profile-panel-body .navo-profile-detail{padding:20px!important}
+#navo-profile-panel-body label{display:block;margin-top:12px}
+#navo-profile-panel-body input,#navo-profile-panel-body select{box-sizing:border-box;width:100%}
+#navo-profile-panel-body #md-portfolio-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#navo-profile-panel-body #md-portfolio-preview img{max-width:100%;height:auto}
+@media(max-width:360px){#masterProfileTab{padding-left:12px!important;padding-right:12px!important}#navo-profile-menu .navo-profile-menu-item{padding:12px!important}}
 </style></body></html>
