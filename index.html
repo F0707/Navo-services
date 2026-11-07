@@ -1194,13 +1194,19 @@ function navoProfileCards(){
    const res=await fetch(ROOT+'/rest/v1/master_applications?user_id=eq.'+encodeURIComponent(masterSession.user.id),{method:'PATCH',headers:{apikey:KEY,Authorization:'Bearer '+masterSession.access_token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({work_schedule:{days,start,end}})});
    const data=await res.json().catch(()=>[]);if(!res.ok||!Array.isArray(data)||!data.length)throw Error(data.message||'Сервер не сохранил расписание');
    masterProfile={...masterProfile,...data[0]};el('navo-profile-modal-schedule').querySelector('.navo-profile-message').textContent='✓ Расписание сохранено';navoProfileRefresh();
-  }catch(e){el('navo-profile-panel-message').textContent='Не сохранено: '+e.message+'. Необходимо поле work_schedule в Supabase.'}finally{btn.disabled=false}
+  }catch(e){el('navo-profile-modal-schedule').querySelector('.navo-profile-message').textContent='Не сохранено: '+e.message+'. Необходимо поле work_schedule в Supabase.'}finally{btn.disabled=false}
  };
 
 }
 function navoProfilePanel(key){
- document.querySelectorAll('.navo-profile-modal').forEach(modal=>{const active=modal.id==='navo-profile-modal-'+key;modal.hidden=!active;modal.classList.toggle('hidden',!active)});
- document.body.classList.toggle('navo-modal-open',!!key);
+ const active=key?el('navo-profile-modal-'+key):null;
+ document.querySelectorAll('.navo-profile-modal').forEach(modal=>{
+  const show=modal===active;
+  modal.hidden=!show;modal.classList.toggle('hidden',!show);
+  modal.style.setProperty('display',show?'flex':'none','important');
+  modal.setAttribute('aria-hidden',String(!show));
+ });
+ document.body.classList.toggle('navo-modal-open',!!active);
  if(key==='gallery')window.navoProfileRefreshGallery?.();
 }
 function navoProfileRefresh(){
@@ -1645,4 +1651,16 @@ body.navo-modal-open{overflow:hidden}
  body:has(#masterProfileTab:not(.hide)) #navo-profile-menu{width:100%!important}
  body:has(#masterProfileTab:not(.hide)) #navo-profile-menu .navo-profile-menu-item{width:100%!important;min-height:72px!important}
 }
+</style><style id="navo-profile-visibility-guard">
+/* The landing page has one and only one visible child: the six-card profile. */
+#navo-master-form-vault,#navo-master-form-vault[hidden],
+#ml-dashboard #navo-master-form-vault,#masterView #navo-master-form-vault{display:none!important;visibility:hidden!important}
+#masterProfileTab:not(.hide) #md-profile{display:block!important}
+#masterProfileTab #md-profile.hide{display:none!important}
+#masterProfileTab:not(.hide) #md-profile>#navo-master-profile-screen{display:block!important}
+#masterProfileTab:not(.hide) #md-profile>:not(#navo-master-profile-screen){display:none!important}
+.navo-profile-modal[hidden],.navo-profile-modal.hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+.navo-profile-modal:not([hidden]):not(.hidden){display:flex!important;visibility:visible!important}
+#navo-profile-panel-schedule,#navo-profile-panel-personal,#navo-profile-panel-gallery,
+#navo-profile-panel-services,#navo-profile-panel-wallet,#navo-profile-panel-security{max-width:100%;min-width:0}
 </style></body></html>
