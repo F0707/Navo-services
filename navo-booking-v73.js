@@ -219,8 +219,7 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
   setFixed(status,{display:status.textContent?'block':'none'});
   // Absolute positioning makes the message list the ONLY scrollable area.
   // The input stays anchored even after hundreds of messages or keyboard resize.
-  const safeTop=Math.max(12,parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navo-chat-safe-top'))||0);
-  const headerHeight=(Math.ceil(head.getBoundingClientRect().height)||88)+safeTop;
+  const headerHeight=Math.ceil(head.getBoundingClientRect().height)||88;
   const composerHeight=Math.ceil(composer.getBoundingClientRect().height)||76;
   const quickHeight=active?Math.ceil(quick.getBoundingClientRect().height)||52:0;
   {
