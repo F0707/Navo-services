@@ -1595,7 +1595,7 @@ if(location.hash.includes('type=recovery')||location.hash.includes('error_descri
 el('logout').onclick=async()=>{sessionStorage.removeItem('master_authenticated');localStorage.removeItem('navo_role');const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){console.warn('NAVO session restore:',e);const message=String(e.message||e);if(/invalid.*token|refresh.*invalid|user.*not.*found|session.*revoked/i.test(message)){auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);msg('Вход истёк. Для продолжения требуется подтверждение телефона.')}else{el('login').classList.remove('hide');msg('Не удалось восстановить вход из-за временной ошибки. Не заказывайте SMS повторно: проверьте соединение и обновите страницу.')}}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=2.0" defer></script><script src="./navo-booking-v73.js?v=20261108-realtime-safe-8dd39a4" defer></script><script src="./navo-inbox-v78.js?v=20261108chatfix" defer></script><script>
+</script><script src="./navo-prices-v72.js?v=2.0" defer></script><script src="./navo-booking-v73.js?v=20261108-unread-6c60d78" defer></script><script src="./navo-inbox-v78.js?v=20261108chatfix" defer></script><script>
 (()=>{'use strict';
 async function refreshNavoFees(){
  const el=document.getElementById('navo-wallet-fee-summary'),s=window.navoV72?.getSession?.();if(!el||!s?.access_token)return;
