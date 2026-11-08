@@ -184,7 +184,23 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const messages=document.createElement('div');messages.className='navo-messenger-messages';
  const renderedIds=new Set();let refreshInFlight=false;let lastServerRows=[];
  const appendMessage=(m,pending=false)=>{const id=String(m.id||'');if(id&&renderedIds.has(id))return;if(id)renderedIds.add(id);const p=document.createElement('div');p.className='navo-message-bubble '+(String(m.sender_id)===String(viewerId)?'navo-message-out':'navo-message-in');if(pending)p.dataset.pending='1';const body=text('span',m.body||'');const time=text('small',m.created_at?new Date(m.created_at).toLocaleTimeString('ru-RU',{timeZone:'Asia/Dushanbe',hour:'2-digit',minute:'2-digit'}):'Отправка…');p.append(body,time);if(String(m.sender_id)===String(viewerId))p.append(text('small',pending?'◷':'✓✓'));messages.append(p);messages.scrollTop=messages.scrollHeight;return p};
- let channel=null,pollTimer=null;
+ let channel=null,pollTimer=null,realtimeClient=null;
+ const openRealtime=async()=>{
+ try{
+ const lib=await import('https://esm.sh/@supabase/supabase-js@2.49.8');
+ if(!details.open)return;
+ const client=lib.createClient(api().ROOT,api().KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}});
+ realtimeClient=client;
+ const jwt=liveToken();if(jwt)client.realtime.setAuth(jwt);
+ channel=client.channel('navo_chat_'+bookingId+'_'+role)
+ .on('postgres_changes',{event:'INSERT',schema:'public',table:'navo_booking_messages',filter:'booking_id=eq.'+bookingId},payload=>{
+ if(!details.open||!payload.new)return;
+ const empty=messages.querySelector('p');if(empty?.textContent==='Сообщений пока нет')empty.remove();
+ appendMessage(payload.new);
+ lastServerRows.push(payload.new);
+ }).subscribe((state)=>{if(state==='CHANNEL_ERROR'||state==='TIMED_OUT'){console.warn('NAVO Realtime channel:',state)}});
+ }catch(error){console.warn('Realtime not available; periodic sync remains active',error)}
+ };
  const status=text('p','');status.className='muted';
  const input=document.createElement('input');input.type='text';input.className='navo-chat-input';input.maxLength=500;input.placeholder='Напишите сообщение…';input.disabled=!active;
  const send=button('➤',async()=>{const body=input.value.trim();if(!body)return;send.disabled=true;input.value='';const optimistic=appendMessage({id:'pending-'+Date.now(),sender_id:viewerId,body},true);try{
@@ -233,8 +249,8 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
   }
   setFixed(messages,{position:'absolute',top:headerHeight+'px',bottom:(composerHeight+quickHeight)+'px',left:'0',right:'0',width:'100%',height:'auto','max-height':'none','min-height':'0',display:'flex','flex-direction':'column','overflow-y':'auto','overflow-x':'hidden','overscroll-behavior-y':'contain',margin:'0'});
  };
- const stopLive=()=>{if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(channel){try{api()?.getSupabase?.()?.removeChannel(channel)}catch(e){}channel=null}};
- const startLive=()=>{stopLive();const client=api()?.getSupabase?.()||window.supabaseClient||window.navoSupabaseClient;try{if(client?.channel){channel=client.channel('navo_chat_'+bookingId).on('postgres_changes',{event:'INSERT',schema:'public',table:'navo_booking_messages',filter:'booking_id=eq.'+bookingId},payload=>{if(details.open&&payload.new){const empty=messages.querySelector('p');if(empty?.textContent==='Сообщений пока нет')empty.remove();appendMessage(payload.new)}}).subscribe()}}catch(e){console.warn('Realtime unavailable',e)}pollTimer=setInterval(()=>{if(details.open&&document.visibilityState==='visible')refresh().catch(console.warn)},2500)};
+ const stopLive=()=>{if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(channel&&realtimeClient){realtimeClient.removeChannel(channel).catch(console.warn)}channel=null;realtimeClient=null};
+ const startLive=()=>{stopLive();openRealtime();pollTimer=setInterval(()=>{if(details.open&&document.visibilityState==='visible')refresh().catch(console.warn)},4000)};
  const closeChat=()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)};
  back.onclick=closeChat;
  details.addEventListener('toggle',()=>{
