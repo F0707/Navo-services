@@ -1911,4 +1911,30 @@ body>details.navo-chat.navo-chat-fullscreen .navo-messenger-send{flex:0 0 44px!i
 body>details.navo-chat.navo-chat-fullscreen .navo-messenger-head{padding-top:max(28px,env(safe-area-inset-top))!important}
 body>details.navo-chat.navo-chat-fullscreen .navo-messenger-composer{padding-bottom:max(22px,env(safe-area-inset-bottom))!important}
 }
-</style></body></html>
+</style><style id="navo-fixed-identity-scroll-20261108">
+@media(max-width:700px){
+ #md-profile:not(.hide){height:calc(100dvh - 158px)!important;min-height:300px!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+ #md-profile #navo-master-profile-screen{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;padding:0 12px!important}
+ #navo-master-profile-screen>h2{flex:none!important;margin:2px 0 6px!important}
+ #navo-master-profile-screen>.navo-profile-compact-head{flex:none!important;position:relative!important;z-index:5!important;margin:0 0 8px!important}
+ #navo-master-profile-screen>.navo-profile-scroll-content{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;padding:4px 0 85px!important;border-radius:14px!important}
+ #navo-master-profile-screen .navo-profile-scroll-content #navo-profile-menu{width:100%!important}
+ #catalog.navo-master-detail-open{overflow:visible!important}
+ #catalog.navo-master-detail-open .navo-selected-master-profile{position:sticky!important;top:max(0px,env(safe-area-inset-top))!important;z-index:120!important;background:#fff!important}
+}
+</style>
+<script id="navo-fixed-identity-init-20261108">
+(function(){
+ function setup(){
+  const screen=document.getElementById('navo-master-profile-screen');
+  if(!screen||screen.querySelector(':scope > .navo-profile-scroll-content'))return;
+  const header=screen.querySelector(':scope > .navo-profile-compact-head');
+  if(!header)return;
+  const scroll=document.createElement('div');
+  scroll.className='navo-profile-scroll-content';
+  while(header.nextSibling)scroll.appendChild(header.nextSibling);
+  screen.appendChild(scroll);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
+})();
+</script></body></html>
