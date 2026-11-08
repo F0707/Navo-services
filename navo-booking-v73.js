@@ -367,7 +367,7 @@ let masterRenderRunning=false,masterRenderQueued=false;
 async function masterCards(){
  if(masterRenderRunning){masterRenderQueued=true;return}
  masterRenderRunning=true;
- try{await renderMasterCards()}finally{
+ try{await renderMasterCards();for(const id of ['md-today-status','md-upcoming-status']){const e=$(id);if(e)e.textContent=''}}catch(error){for(const id of ['md-today-status','md-upcoming-status']){const e=$(id);if(e)e.textContent='Не удалось загрузить записи: '+error.message}console.error('NAVO master bookings:',error)}finally{
  masterRenderRunning=false;
  if(masterRenderQueued){masterRenderQueued=false;masterCards().catch(console.error)}
  }
