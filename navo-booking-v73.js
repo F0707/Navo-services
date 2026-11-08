@@ -250,7 +250,7 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
   setFixed(messages,{position:'absolute',top:headerHeight+'px',bottom:(composerHeight+quickHeight)+'px',left:'0',right:'0',width:'100%',height:'auto','max-height':'none','min-height':'0',display:'flex','flex-direction':'column','overflow-y':'auto','overflow-x':'hidden','overscroll-behavior-y':'contain',margin:'0'});
  };
  const stopLive=()=>{if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(channel&&realtimeClient){realtimeClient.removeChannel(channel).catch(console.warn)}channel=null;realtimeClient=null};
- const startLive=()=>{stopLive();openRealtime();pollTimer=setInterval(()=>{if(details.open&&document.visibilityState==='visible')refresh().catch(console.warn)},4000)};
+ const startLive=()=>{stopLive();openRealtime();pollTimer=setInterval(async()=>{if(!details.open||document.visibilityState!=='visible')return;try{const latest=api()?.getAuth?.();if(latest?.refresh_token&&typeof api()?.ensureSession==='function')await api().ensureSession();const jwt=liveToken();if(jwt&&realtimeClient)realtimeClient.realtime.setAuth(jwt);await refresh()}catch(error){console.warn('NAVO chat sync:',error)}},4000)};
  const closeChat=()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)};
  back.onclick=closeChat;
  details.addEventListener('toggle',()=>{
