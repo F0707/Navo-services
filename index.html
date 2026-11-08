@@ -1917,7 +1917,7 @@ body>details.navo-chat.navo-chat-fullscreen .navo-messenger-composer{padding-bot
  #md-profile #navo-master-profile-screen{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;padding:0 12px!important}
  #navo-master-profile-screen>h2{flex:none!important;margin:2px 0 6px!important}
  #navo-master-profile-screen>.navo-profile-compact-head{flex:none!important;position:relative!important;z-index:5!important;margin:0 0 8px!important}
- #navo-master-profile-screen>.navo-profile-scroll-content{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;padding:4px 0 85px!important;border-radius:14px!important}
+ #navo-master-profile-screen>.navo-profile-scroll-content{display:block!important;box-sizing:border-box!important;height:45dvh!important;max-height:45dvh!important;min-height:120px!important;overflow-y:scroll!important;overflow-x:hidden!important;touch-action:pan-y!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;padding:4px 0 24px!important;border-radius:14px!important}
  #navo-master-profile-screen .navo-profile-scroll-content #navo-profile-menu{width:100%!important}
  #catalog.navo-master-detail-open{overflow:visible!important}
  #catalog.navo-master-detail-open .navo-selected-master-profile{position:sticky!important;top:max(0px,env(safe-area-inset-top))!important;z-index:120!important;background:#fff!important}
@@ -1936,5 +1936,25 @@ body>details.navo-chat.navo-chat-fullscreen .navo-messenger-composer{padding-bot
   screen.appendChild(scroll);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
+})();
+</script><script id="navo-scroll-height-repair-20261108">
+(function(){
+ function resizeProfileScroll(){
+  const box=document.querySelector('#navo-master-profile-screen > .navo-profile-scroll-content');
+  const tab=document.getElementById('masterProfileTab');
+  if(!box||!tab||tab.classList.contains('hide'))return;
+  const nav=document.getElementById('masterBottomNav');
+  const bottom=nav&&!nav.hidden?nav.getBoundingClientRect().top:window.innerHeight-72;
+  const top=box.getBoundingClientRect().top;
+  const height=Math.max(130,Math.floor(Math.min(window.innerHeight-40,bottom-top-10)));
+  box.style.setProperty('height',height+'px','important');
+  box.style.setProperty('max-height',height+'px','important');
+ }
+ function schedule(){requestAnimationFrame(()=>requestAnimationFrame(resizeProfileScroll))}
+ window.addEventListener('resize',schedule);
+ window.visualViewport?.addEventListener('resize',schedule);
+ document.addEventListener('click',schedule);
+ document.addEventListener('DOMContentLoaded',schedule);
+ setTimeout(schedule,300);
 })();
 </script></body></html>
