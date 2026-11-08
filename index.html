@@ -983,7 +983,7 @@ async function navoRestoreMasterHome(){
  }catch(e){console.warn('NAVO master home:',e.message)}
 }
 let navoPreviousSection='catalog',navoCurrentSection='catalog';
-function show(id){if(id==='bookings'&&typeof window.navoShowAllBookings==='function')window.navoShowAllBookings();el('inside').classList.toggle('navo-master-view',id==='master-login'&&!el('ml-dashboard').classList.contains('hide'));if(id!==navoCurrentSection){navoPreviousSection=navoCurrentSection;navoCurrentSection=id}const back=el('navo-return-master');if(back)back.classList.toggle('hide',!masterProfile||id==='master-login');for(const x of ['catalog','bookings','favorites','profile','master-register','master-login']){const node=el(x);if(node)node.classList.toggle('hide',x!==id);const tab=el('tab-'+x);if(tab)tab.className=x===id?'primary':'secondary'}}
+function show(id){if(id==='master-register'){const regBox=el('master-reg-content');if(regBox&&!regBox.querySelector('#mr-email-step')&&!regBox.querySelector('#mr-details')){try{renderMasterRegistration()}catch(error){console.error('Registration rendering failed',error);regBox.textContent='Ошибка открытия формы: '+error.message}}} }if(id==='bookings'&&typeof window.navoShowAllBookings==='function')window.navoShowAllBookings();el('inside').classList.toggle('navo-master-view',id==='master-login'&&!el('ml-dashboard').classList.contains('hide'));if(id!==navoCurrentSection){navoPreviousSection=navoCurrentSection;navoCurrentSection=id}const back=el('navo-return-master');if(back)back.classList.toggle('hide',!masterProfile||id==='master-login');for(const x of ['catalog','bookings','favorites','profile','master-register','master-login']){const node=el(x);if(node)node.classList.toggle('hide',x!==id);const tab=el('tab-'+x);if(tab)tab.className=x===id?'primary':'secondary'}}
 el('navo-global-back').onclick=()=>{if(navoCurrentSection==='master-login'&&masterProfile){show('catalog');catalog()}else if(navoCurrentSection==='catalog'){if(masterProfile&&masterSession)masterOpen(masterSession,masterProfile);else show('profile')}else if(navoPreviousSection&&navoPreviousSection!==navoCurrentSection)show(navoPreviousSection);else show('catalog')};
 for(const id of ['catalog','bookings','favorites','profile'])el('tab-'+id).onclick=()=>{show(id);if(id==='bookings')bookings();if(id==='favorites')renderNavoFavorites();if(id==='catalog')catalog();if(id==='profile')navoOrganizeClientProfile()};
 
@@ -2023,5 +2023,21 @@ body>details.navo-chat.navo-chat-fullscreen .navo-messenger-composer{padding-bot
   const section=document.getElementById('master-register');
   if(section)new MutationObserver(ensureForm).observe(section,{attributes:true,attributeFilter:['class']});
  });
+})();
+</script><script id="navo-registration-entry-recovery">
+(function(){
+ function repair(){
+  const section=document.getElementById('master-register'),box=document.getElementById('master-reg-content');
+  if(!section||!box||section.classList.contains('hide'))return;
+  if(box.querySelector('#mr-email-step,#mr-details'))return;
+  if(typeof renderMasterRegistration==='function'){
+   try{renderMasterRegistration()}catch(e){console.error(e);box.textContent='Ошибка формы: '+e.message}
+  }
+ }
+ document.addEventListener('click',function(e){
+  if(e.target.closest('#open-master-registration'))queueMicrotask(repair);
+ },true);
+ window.addEventListener('pageshow',repair);
+ document.addEventListener('DOMContentLoaded',repair);
 })();
 </script></body></html>
