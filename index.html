@@ -1446,7 +1446,7 @@ async function masterBookings(){
    if(!box)return;
    box.replaceChildren();
    for(const b of items){
-    const card=bookingItem(b);
+    const card=document.createElement('div');card.className='item';const when=document.createElement('strong');when.textContent=new Date(b.starts_at).toLocaleString('ru-RU',{timeZone:'Asia/Dushanbe',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});const info=document.createElement('p');info.textContent='Клиент: '+(b.client_phone||'номер не указан')+' · '+b.status+' · '+(b.total_somoni??'—')+' сомони';card.append(when,info);
     card.dataset.bookingId=String(b.id);
     box.append(card);
    }
