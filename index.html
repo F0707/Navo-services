@@ -918,7 +918,8 @@ async function navoRefreshAccessToken(){
    const response=await fetch(ROOT+'/auth/v1/token?grant_type=refresh_token',{method:'POST',signal:controller.signal,headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:auth.refresh_token})});
    const next=await response.json().catch(()=>({}));
    if(!response.ok||!next.access_token)throw Error('Сессия истекла. Войдите в NAVO повторно — ваши записи сохранятся.');
-   save({...auth,...next,expires_at:Date.now()+(Number(next.expires_in)||3600)*1000});
+   const previous=auth;save({...previous,...next,user:next.user||previous.user,expires_at:Date.now()+(Number(next.expires_in)||3600)*1000});
+   if(masterSession&&masterSession.user?.id===auth.user?.id)masterSession={...masterSession,...auth};
    return auth.access_token;
   }catch(error){if(error?.name==='AbortError'||error instanceof TypeError)throw Error('Нет связи с сервером NAVO. Проверьте интернет и повторите.');throw error}
   finally{clearTimeout(timer)}
@@ -940,7 +941,7 @@ async function request(path,body,token,method='POST'){
    const json=await response.json().catch(()=>({}));
    if(!response.ok){
     const message=String(json.msg||json.message||json.error_description||json.error||'Ошибка сервера '+response.status);
-    if(attempt===0&&!isRefresh&&!isAuthEndpoint&&isProtected&&(response.status===401||/jwt expired|token.*expired/i.test(message))){accessToken=auth?.access_token&&accessToken!==auth.access_token?auth.access_token:await navoRefreshAccessToken();continue}
+    if(attempt===0&&!isRefresh&&!isAuthEndpoint&&isProtected&&(response.status===401||/jwt expired|token.*expired/i.test(message))){accessToken=await navoRefreshAccessToken();continue}
     if(/jwt expired|token.*expired/i.test(message))throw Error('Сессия истекла. Войдите в NAVO повторно — ваши записи сохранятся.');
     throw Error(message);
    }
@@ -1027,7 +1028,7 @@ function navoApplyCatalogRegion(){const selected=el('navo-region-select')?.value
 async function catalog(){
  el('catalog').classList.remove('navo-master-detail-open');
  try{
- const rows=await request('/rest/v1/navo_test_master_catalog?select=*&limit=100',null,auth?.access_token,'GET');
+ const rows=await request('/rest/v1/navo_test_master_catalog?select=*&limit=1000',null,auth?.access_token,'GET');
  el('catalog-status').textContent=rows.length?'':'Пока нет доступных мастеров. Попробуйте зайти позже.';
  const box=el('catalog-items');box.replaceChildren();
  let ratings=new Map();try{const reviews=await request('/rest/v1/navo_master_review_summary?select=master_id,average_stars,reviews_count',null,auth?.access_token,'GET');ratings=new Map(reviews.map(x=>[String(x.master_id),x]))}catch(e){console.warn('Рейтинги временно недоступны',e)}
@@ -1045,11 +1046,6 @@ async function catalog(){
  head.append(content);card.append(head);const favorite=document.createElement('button');favorite.type='button';favorite.className='navo-favorite-toggle';favorite.dataset.id=String(row.master_id||'');favorite.textContent=navoFavorites().includes(favorite.dataset.id)?'★':'☆';favorite.id='favBtn-'+favorite.dataset.id;favorite.classList.toggle('is-favorite',navoFavorites().includes(favorite.dataset.id));favorite.setAttribute('aria-label','Добавить мастера в избранное');card.append(favorite);
  if(row.city||row.work_address){const route=document.createElement('a');route.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([row.city,row.work_address].filter(Boolean).join(', '));route.target='_blank';route.rel='noopener noreferrer';route.className='navo-route-link';route.textContent='🧭 Найти на карте';route.addEventListener('click',e=>e.stopPropagation());card.append(route)}
  
- {
- const tags=content.querySelector('.navo-service-tags')||document.createElement('div');tags.className='navo-service-tags navo-live-service-tags';if(!tags.isConnected)content.append(tags);
- request('/rest/v1/navo_test_master_prices?select=name,price_somoni&master_id=eq.'+encodeURIComponent(row.master_id)+'&order=price_somoni.asc&limit=3',null,auth.access_token,'GET')
-  .then(prices=>{if(!card.isConnected)return;tags.replaceChildren();for(const item of prices){if(!item.name||item.price_somoni==null)continue;const tag=document.createElement('span');tag.textContent=item.name+' · '+Number(item.price_somoni).toLocaleString('ru-RU')+' TJS';tags.append(tag)}if(tags.childElementCount){card.dataset.navoServices=prices.map(x=>x.name||'').join(' ').toLowerCase();card.dataset.navoSearch+=' '+card.dataset.navoServices;navoFilterCatalog()}}).catch(()=>{});
-}
 const action=document.createElement('div');action.className='navo-master-action';action.textContent='Записаться к мастеру  ›';card.append(action);const serviceText=Array.isArray(row.services)?row.services.map(x=>typeof x==='string'?x:(x.name||x.service_name||'')).join(' '):'';card.dataset.navoSearch=[row.salon_name,row.display_name,row.name,row.city,row.work_address,serviceText].filter(Boolean).join(' ').toLowerCase();card.dataset.navoServices=serviceText.toLowerCase();const prices=Array.isArray(row.services)?row.services.map(x=>Number(x?.price_somoni??x?.price)).filter(x=>Number.isFinite(x)&&x>0):[];if(prices.length){const price=document.createElement('p');price.className='navo-card-min-price';price.textContent='от '+Math.min(...prices)+' сом.';content.append(price)}
  card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();card.click()}});
  box.append(card)
@@ -1744,4 +1740,19 @@ body.navo-modal-open{overflow:hidden}
 </style><style id="navo-booking-tabs-status-fix">
 #navo-bookings-segments{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;width:100%!important}
 #navo-bookings-segments button{box-sizing:border-box!important;min-width:0!important;width:100%!important;white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;font-size:clamp(10px,3vw,13px)!important;padding:9px 3px!important;line-height:1.2!important}
+</style><style id="navo-catalog-row-20261108">
+@media(max-width:600px){
+ #catalog-items{display:flex!important;flex-direction:column!important;gap:8px!important;width:100%!important;min-width:0!important}
+ #catalog-items .navo-master-card{box-sizing:border-box!important;position:relative!important;display:flex!important;align-items:center!important;min-height:110px!important;height:116px!important;max-height:120px!important;padding:9px 10px!important;margin:0!important;overflow:hidden!important;border:1px solid #dce8e0!important;border-radius:15px!important;background:#fff!important;box-shadow:0 2px 9px #123b2610!important}
+ #catalog-items .navo-master-head{display:flex!important;align-items:center!important;gap:10px!important;min-width:0!important;width:100%!important;height:100%!important}
+ #catalog-items .navo-master-avatar{width:84px!important;height:91px!important;min-width:84px!important;border-radius:10px!important;object-fit:cover!important}
+ #catalog-items .navo-master-info{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:3px!important;min-width:0!important;flex:1!important;padding-right:44px!important}
+ #catalog-items .navo-master-info strong{display:block!important;font-size:14px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
+ #catalog-items .navo-master-info p{font-size:10px!important;line-height:1.2!important;margin:0!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+ #catalog-items .navo-master-rating-stars{font-size:10px!important;white-space:nowrap!important;max-width:100%!important;overflow:hidden!important}
+ #catalog-items .navo-service-tags,#catalog-items .navo-landmark,#catalog-items .navo-route-link{display:none!important}
+ #catalog-items .navo-card-min-price{font-size:11px!important;font-weight:700!important;margin:1px 0!important}
+ #catalog-items .navo-master-action{position:absolute!important;right:9px!important;bottom:10px!important;display:block!important;width:auto!important;max-width:96px!important;margin:0!important;padding:7px 9px!important;background:#16845c!important;color:#fff!important;border-radius:9px!important;font-size:10px!important;line-height:1.1!important;text-align:center!important;white-space:nowrap!important}
+ #catalog-items .navo-favorite-toggle{position:absolute!important;right:9px!important;top:7px!important;width:28px!important;height:28px!important;min-height:0!important;padding:2px!important}
+}
 </style></body></html>
