@@ -930,7 +930,9 @@ async function request(path,body,token,method='POST'){
  const isRefresh=path.includes('grant_type=refresh_token');
  const isProtected=!isAuthEndpoint&&Boolean(token||auth?.access_token);
  let accessToken=token;
- if(isProtected&&auth?.refresh_token&&auth?.access_token&&token===auth.access_token&&auth.expires_at&&Date.now()>Number(auth.expires_at)-60000){accessToken=await navoRefreshAccessToken()}
+ // Callers may retain a JWT from before refresh; always prefer the current token for the same signed-in account.
+ if(isProtected&&auth?.access_token&&token&&token!==auth.access_token)accessToken=auth.access_token;
+ if(isProtected&&auth?.refresh_token&&auth?.access_token&&accessToken===auth.access_token&&auth.expires_at&&Date.now()>Number(auth.expires_at)-60000){accessToken=await navoRefreshAccessToken()}
  for(let attempt=0;attempt<2;attempt++){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
   try{
@@ -1339,8 +1341,8 @@ window.fetch=async function(input,init){
  const isProtected=isSupabase&&!url.includes('/auth/v1/token')&&!url.includes('/auth/v1/otp')&&!url.includes('/auth/v1/verify')&&!url.includes('/auth/v1/logout')&&/^Bearer /i.test(authorization);
  if(!isProtected)return navoNativeFetch(input,init);
  const provided=authorization.replace(/^Bearer\s+/i,'');
- const known=provided===masterSession?.access_token||provided===auth?.access_token;
- let token=provided;
+ const known=provided===masterSession?.access_token||provided===auth?.access_token||Boolean(auth?.access_token&&masterSession?.user?.id&&auth.user?.id===masterSession.user.id);
+ let token=known?(masterSession?.access_token||auth?.access_token||provided):provided;
  if(known&&navoJwtExpiresSoon(token))token=await navoEnsureMasterSession();
  const doFetch=t=>{
   const h=new Headers(headers);h.set('Authorization','Bearer '+t);
@@ -1586,7 +1588,7 @@ if(location.hash.includes('type=recovery')||location.hash.includes('error_descri
 el('logout').onclick=async()=>{sessionStorage.removeItem('master_authenticated');localStorage.removeItem('navo_role');const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){console.warn('NAVO session restore:',e);const message=String(e.message||e);if(/invalid.*token|refresh.*invalid|user.*not.*found|session.*revoked/i.test(message)){auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);msg('Вход истёк. Для продолжения требуется подтверждение телефона.')}else{el('login').classList.remove('hide');msg('Не удалось восстановить вход из-за временной ошибки. Не заказывайте SMS повторно: проверьте соединение и обновите страницу.')}}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=2.0" defer></script><script src="./navo-booking-v73.js?v=2.0" defer></script><script src="./navo-inbox-v78.js?v=2.0" defer></script><script>
+</script><script src="./navo-prices-v72.js?v=2.0" defer></script><script src="./navo-booking-v73.js?v=20261108chatfix" defer></script><script src="./navo-inbox-v78.js?v=20261108chatfix" defer></script><script>
 (()=>{'use strict';
 async function refreshNavoFees(){
  const el=document.getElementById('navo-wallet-fee-summary'),s=window.navoV72?.getSession?.();if(!el||!s?.access_token)return;
@@ -1739,4 +1741,7 @@ body.navo-modal-open{overflow:hidden}
  #navo-profile-menu .navo-profile-menu-item{min-height:47px!important;padding:5px 10px!important}
  #navo-profile-menu{gap:5px!important}
 }
+</style><style id="navo-booking-tabs-status-fix">
+#navo-bookings-segments{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;width:100%!important}
+#navo-bookings-segments button{box-sizing:border-box!important;min-width:0!important;width:100%!important;white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;font-size:clamp(10px,3vw,13px)!important;padding:9px 3px!important;line-height:1.2!important}
 </style></body></html>
