@@ -180,18 +180,20 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
  const liveToken=()=>api()?.getSession?.()?.access_token||api()?.getAuth?.()?.access_token||accessToken;
  const wrap=document.createElement('div');wrap.className='item navo-chat-content';wrap.style.marginTop='10px';wrap.style.background='transparent';
  const displayName=meta.name||meta.phone||(role==='master'?'Клиент':'Мастер NAVO');const header=text('div',displayName+(role==='client'?' (Мастер)':''));header.className='navo-messenger-heading';const statusLabel={confirmed:'Подтверждена',requested:'Ожидает подтверждения',completed:'Завершена',cancelled:'Отменена'}[meta.status]||'';const info=text('p',[meta.service,meta.date,statusLabel].filter(Boolean).join(' · ')||'Переписка по записи');info.className='muted navo-messenger-subtitle';const head=document.createElement('div');head.className='navo-messenger-head';const back=button('←',()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)});back.className='navo-chat-back';head.append(back);{const avatar=document.createElement('img');avatar.alt='Фото собеседника';avatar.className='navo-chat-avatar';if(meta.photo){avatar.src=meta.photo;avatar.onerror=()=>{avatar.style.display='none';fallback.style.display='grid'}}else avatar.style.display='none';head.append(avatar);const fallback=document.createElement('span');fallback.className='navo-chat-avatar navo-chat-avatar-fallback';fallback.textContent=(displayName.trim().charAt(0)||'👤').toUpperCase();fallback.style.display=meta.photo?'none':'grid';head.append(fallback)}const headerCopy=document.createElement('div');headerCopy.className='navo-chat-contact';headerCopy.append(header,info);head.append(headerCopy);if(meta.phone){const call=document.createElement('a');call.href='tel:'+String(meta.phone).replace(/[^+\d]/g,'');call.textContent='📞';call.className='navo-messenger-call';call.setAttribute('aria-label','Позвонить собеседнику');head.append(call)}
- if(meta.phone){const phone=text('div',meta.phone);phone.className='navo-chat-phone';headerCopy.append(phone)}
+ /* Phone is already displayed in the title or accessible via call button; avoid duplicate third line. */
  const messages=document.createElement('div');messages.className='navo-messenger-messages';
+ const renderedIds=new Set();
+ const appendMessage=(m,pending=false)=>{const id=String(m.id||'');if(id&&renderedIds.has(id))return;if(id)renderedIds.add(id);const p=document.createElement('div');p.className='navo-message-bubble '+(String(m.sender_id)===String(viewerId)?'navo-message-out':'navo-message-in');if(pending)p.dataset.pending='1';const body=text('span',m.body||'');const time=text('small',m.created_at?new Date(m.created_at).toLocaleTimeString('ru-RU',{timeZone:'Asia/Dushanbe',hour:'2-digit',minute:'2-digit'}):'Отправка…');p.append(body,time);if(String(m.sender_id)===String(viewerId))p.append(text('small',pending?'◷':'✓✓'));messages.append(p);messages.scrollTop=messages.scrollHeight;return p};
+ let channel=null,pollTimer=null;
  const status=text('p','');status.className='muted';
  const input=document.createElement('input');input.type='text';input.className='navo-chat-input';input.maxLength=500;input.placeholder='Напишите сообщение…';input.disabled=!active;
- const send=button('➤',async()=>{const body=input.value.trim();if(!body)return;send.disabled=true;try{
+ const send=button('➤',async()=>{const body=input.value.trim();if(!body)return;send.disabled=true;input.value='';const optimistic=appendMessage({sender_id:viewerId,body},true);try{
  await api().request('/rest/v1/navo_booking_messages',{booking_id:bookingId,sender_id:viewerId,body},liveToken(),'POST');
- input.value='';navoTone('outgoing');await refresh()
- }catch(e){status.textContent='Ошибка: '+e.message}finally{send.disabled=false}});
+ optimistic?.remove();navoTone('outgoing');await refresh()
+ }catch(e){optimistic?.remove();input.value=body;status.textContent='Не отправлено: '+e.message}finally{send.disabled=false}});
  send.className='navo-messenger-send';send.setAttribute('aria-label','Отправить сообщение');input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();if(!send.disabled)send.click()}});
  const refresh=async()=>{try{const rows=await get('/rest/v1/navo_booking_messages?select=id,sender_id,body,created_at&booking_id=eq.'+encodeURIComponent(bookingId)+'&order=created_at.asc&limit=100',liveToken());
- messages.replaceChildren();if(!rows.length)messages.append(text('p','Сообщений пока нет'));
- for(const m of rows){const p=document.createElement('div');p.className='navo-message-bubble '+(m.sender_id===viewerId?'navo-message-out':'navo-message-in');const body=text('span',m.body);const time=text('small',new Date(m.created_at).toLocaleTimeString('ru-RU',{timeZone:'Asia/Dushanbe',hour:'2-digit',minute:'2-digit'}));p.append(body,time);if(m.sender_id===viewerId)p.append(text('small','✓✓'));messages.append(p)}
+ messages.replaceChildren();renderedIds.clear();if(!rows.length)messages.append(text('p','Сообщений пока нет'));else for(const m of rows)appendMessage(m);
  requestAnimationFrame(()=>{layoutChat();messages.scrollTop=messages.scrollHeight});
  status.textContent='';await markChatRead(bookingId,viewerId,liveToken());
  }catch(e){status.textContent='Ошибка загрузки переписки: '+e.message}};
@@ -210,14 +212,15 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
   if(!details.open)return;
   const viewport=window.visualViewport;
   const height=Math.max(280,Math.round(viewport?.height||window.innerHeight));
-  const top=Math.round(viewport?.offsetTop||0);
+  const top=Math.max(0,Math.round(viewport?.offsetTop||0));
   setFixed(details,{position:'fixed',top:top+'px',left:'0px',right:'0px',bottom:'auto',height:height+'px','max-height':height+'px',width:'100%','overflow':'hidden','z-index':'2147483000'});
   setFixed(wrap,{position:'absolute',top:'0',left:'0',right:'0',bottom:'0',height:'100%',width:'100%',display:'block','min-height':'0','overflow':'hidden',margin:'0',padding:'0'});
-  setFixed(head,{position:'absolute',top:'0',left:'0',right:'0',bottom:'auto',height:'auto','max-height':'none',margin:'0'});
+  setFixed(head,{position:'absolute',top:'0',left:'0',right:'0',bottom:'auto',height:'auto','max-height':'none',margin:'0','padding-top':'max(12px, env(safe-area-inset-top))'});
   setFixed(status,{display:status.textContent?'block':'none'});
   // Absolute positioning makes the message list the ONLY scrollable area.
   // The input stays anchored even after hundreds of messages or keyboard resize.
-  const headerHeight=Math.ceil(head.getBoundingClientRect().height)||88;
+  const safeTop=Math.max(12,parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navo-chat-safe-top'))||0);
+  const headerHeight=(Math.ceil(head.getBoundingClientRect().height)||88)+safeTop;
   const composerHeight=Math.ceil(composer.getBoundingClientRect().height)||76;
   const quickHeight=active?Math.ceil(quick.getBoundingClientRect().height)||52:0;
   {
@@ -226,6 +229,8 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
   }
   setFixed(messages,{position:'absolute',top:headerHeight+'px',bottom:(composerHeight+quickHeight)+'px',left:'0',right:'0',width:'100%',height:'auto','max-height':'none','min-height':'0',display:'flex','flex-direction':'column','overflow-y':'auto','overflow-x':'hidden','overscroll-behavior-y':'contain',margin:'0'});
  };
+ const stopLive=()=>{if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(channel){try{api()?.getSupabase?.()?.removeChannel(channel)}catch(e){}channel=null}};
+ const startLive=()=>{stopLive();const client=api()?.getSupabase?.()||window.supabaseClient||window.navoSupabaseClient;try{if(client?.channel){channel=client.channel('navo_chat_'+bookingId).on('postgres_changes',{event:'INSERT',schema:'public',table:'navo_booking_messages',filter:'booking_id=eq.'+bookingId},payload=>{if(details.open&&payload.new){const empty=messages.querySelector('p');if(empty?.textContent==='Сообщений пока нет')empty.remove();appendMessage(payload.new)}}).subscribe()}}catch(e){console.warn('Realtime unavailable',e)}pollTimer=setInterval(()=>{if(details.open&&document.visibilityState==='visible')refresh().catch(console.warn)},5000)};
  const closeChat=()=>{details.open=false;if(role==='client')navoSetBookingFocus(null)};
  back.onclick=closeChat;
  details.addEventListener('toggle',()=>{
@@ -238,10 +243,10 @@ function chatPanel(bookingId,viewerId,accessToken,active,role,meta={}){
    window.addEventListener('resize',layoutChat);
    window.visualViewport?.addEventListener('resize',layoutChat);
    window.visualViewport?.addEventListener('scroll',layoutChat);
-   refresh();
+   refresh();startLive();
    requestAnimationFrame(()=>{layoutChat();messages.scrollTop=messages.scrollHeight});
   }else{
-   window.removeEventListener('resize',layoutChat);
+   stopLive();window.removeEventListener('resize',layoutChat);
    window.visualViewport?.removeEventListener('resize',layoutChat);
    window.visualViewport?.removeEventListener('scroll',layoutChat);
    details.classList.remove('navo-chat-fullscreen');
