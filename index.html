@@ -1377,7 +1377,7 @@ window.fetch=async function(input,init){
  return response;
 };
 
-window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,show,catalog,masterEditLoad,masterBookings,bookings};
+window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,ensureSession:()=>navoEnsureMasterSession(),show,catalog,masterEditLoad,masterBookings,bookings};
 el('md-password-open').onclick=()=>{el('md-password-panel').classList.toggle('hide');};
 el('md-password-save').onclick=async()=>{
  const b=el('md-password-save'),p=el('md-password-new').value,q=el('md-password-repeat').value;
