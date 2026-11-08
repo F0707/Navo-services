@@ -1045,8 +1045,8 @@ async function catalog(append=false){
  const region=el('navo-region-select')?.value||'all';
  const search=(el('navo-catalog-search')?.value||'').trim();
  let query='/rest/v1/navo_test_master_catalog?select=*&order=display_name.asc&limit=20&offset='+navoCatalogOffset;
- if(region!=='all')query+='&or=('+['district','city','work_address'].map(key=>key+'.ilike.*'+encodeURIComponent(region)+'*').join(',')+')';
- if(search)query+='&or=('+['display_name','work_address','salon_name'].map(key=>key+'.ilike.*'+encodeURIComponent(search)+'*').join(',')+')';
+ if(region!=='all')query+='&or=('+['city','work_address'].map(key=>key+'.ilike.*'+encodeURIComponent(region)+'*').join(',')+')';
+ if(search)query+='&or=('+['display_name','work_address'].map(key=>key+'.ilike.*'+encodeURIComponent(search)+'*').join(',')+')';
  const rows=await request(query,null,auth?.access_token,'GET');
  if(requestId!==navoCatalogRequestId)return;
  el('catalog-status').textContent=rows.length?'':'Пока нет доступных мастеров. Попробуйте зайти позже.';
