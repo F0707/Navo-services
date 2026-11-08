@@ -1137,7 +1137,7 @@ async function submitMaster(){
   el('mr-submit').disabled=true;el('mr-password').value='';el('mr-password2').value='';
  }catch(e){masterStatus('Ошибка: '+e.message);btn.disabled=false}
 }
-el('open-master-registration').onclick=()=>{show('master-register');renderMasterRegistration()};
+el('open-master-registration').onclick=()=>{renderMasterRegistration();show('master-register')};
 el('open-master-login').onclick=()=>{el('master-login').classList.add('navo-login-modal');showLoginForm();show('master-login');el('ml-signin-form').classList.remove('hide');el('ml-status').textContent='';el('ml-dashboard').classList.add('hide')};
 
 el('btnMasterEntrance').onclick=()=>{if(masterSession?.access_token&&masterProfile){masterOpen(masterSession,masterProfile).catch(console.error);return}el('open-master-login').click()};
@@ -2009,4 +2009,19 @@ body>details.navo-chat.navo-chat-fullscreen .navo-messenger-composer{padding-bot
  #navo-master-profile-screen>h2{display:none!important}
  #navo-master-profile-screen>.navo-profile-compact-head{margin-top:0!important}
 }
-</style></body></html>
+</style><script id="navo-master-registration-visibility-repair">
+(function(){
+ function ensureForm(){
+  const section=document.getElementById('master-register'),target=document.getElementById('master-reg-content');
+  if(!section||!target||section.classList.contains('hide')||target.children.length)return;
+  if(typeof renderMasterRegistration==='function'){
+   try{renderMasterRegistration()}catch(e){console.error('NAVO registration form:',e);target.textContent='Не удалось открыть форму регистрации. Вернитесь назад и попробуйте снова.'}
+  }
+ }
+ document.addEventListener('DOMContentLoaded',()=>{
+  ensureForm();
+  const section=document.getElementById('master-register');
+  if(section)new MutationObserver(ensureForm).observe(section,{attributes:true,attributeFilter:['class']});
+ });
+})();
+</script></body></html>
