@@ -333,6 +333,8 @@ async function renderClientCards(){
   codeBox=document.createElement('div');codeBox.className='item navo-code-ticket';codeBox.style.textAlign='center';
   codeBox.append(text('p','Код для мастера:'),text('h2','••••'));
   card.append(codeBox);
+  const loadCode=async()=>{if(codeBox.dataset.loaded)return;codeBox.dataset.loaded='1';try{const code=await rpc('navo_get_booking_code',{p_booking:b.id});if(!card.isConnected)return;const digits=codeBox.querySelector('h2');digits.className='navo-ticket-digits';digits.textContent=code?String(code).padStart(4,'0').split('').join(' '):'Код недоступен'}catch(e){codeBox.querySelector('h2').textContent='Код недоступен'}};
+  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(entries.some(x=>x.isIntersecting)){observer.disconnect();loadCode()}},{rootMargin:'150px'});observer.observe(codeBox)}else loadCode();
  }
  bookingData[bookingIndex].then(({items:loadedItems,code})=>{
   if(!card.isConnected)return;
