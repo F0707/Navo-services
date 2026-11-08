@@ -1307,6 +1307,56 @@ const navoModalClose=document.createElement('button');navoModalClose.type='butto
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-toggle-password]');if(!b)return;const input=el(b.dataset.togglePassword);if(!input)return;const showing=input.type==='password';input.type=showing?'text':'password';b.setAttribute('aria-pressed',String(showing));b.setAttribute('aria-label',showing?'Скрыть пароль':'Показать пароль');b.textContent=showing?'🙈':'👁'});
 let masterSession=null,masterProfile=null,masterEmailPending='';
+
+// Keep client and master tokens fresh without forcing another paid SMS login.
+// One refresh request per session; a failed refresh never silently logs the user out.
+const navoNativeFetch=window.fetch.bind(window);
+let navoMasterRefreshPromise=null;
+function navoJwtExpiresSoon(token){
+ try{const payload=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return !payload.exp||payload.exp*1000<Date.now()+90000}catch{return false}
+}
+async function navoEnsureMasterSession(force=false){
+ const session=masterSession?.refresh_token?masterSession:auth;
+ if(!session?.refresh_token)return session?.access_token||null;
+ if(!force&&session.access_token&&!navoJwtExpiresSoon(session.access_token))return session.access_token;
+ if(navoMasterRefreshPromise)return navoMasterRefreshPromise;
+ navoMasterRefreshPromise=(async()=>{
+  const response=await navoNativeFetch(ROOT+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.access_token)throw Error('Не удалось обновить сессию: '+(data.msg||data.message||data.error_description||'повторите попытку позже'));
+  const fresh={...session,...data,user:data.user||session.user,expires_at:Date.now()+(Number(data.expires_in)||3600)*1000};
+  if(masterSession&&masterSession.user?.id===fresh.user?.id)masterSession=fresh;
+  save(fresh);
+  return fresh.access_token;
+ })();
+ try{return await navoMasterRefreshPromise}finally{navoMasterRefreshPromise=null}
+}
+window.fetch=async function(input,init){
+ const url=typeof input==='string'?input:input?.url||'';
+ const headers=new Headers(init?.headers||(input instanceof Request?input.headers:undefined));
+ const authorization=headers.get('Authorization')||'';
+ const isSupabase=url.startsWith(ROOT);
+ const isProtected=isSupabase&&!url.includes('/auth/v1/token')&&!url.includes('/auth/v1/otp')&&!url.includes('/auth/v1/verify')&&!url.includes('/auth/v1/logout')&&/^Bearer /i.test(authorization);
+ if(!isProtected)return navoNativeFetch(input,init);
+ const provided=authorization.replace(/^Bearer\s+/i,'');
+ const known=provided===masterSession?.access_token||provided===auth?.access_token;
+ let token=provided;
+ if(known&&navoJwtExpiresSoon(token))token=await navoEnsureMasterSession();
+ const doFetch=t=>{
+  const h=new Headers(headers);h.set('Authorization','Bearer '+t);
+  return navoNativeFetch(input,{...init,headers:h});
+ };
+ let response=await doFetch(token);
+ if(response.status===401&&known){
+  const body=await response.clone().text().catch(()=>'');
+  if(/jwt|expired|invalid.*token/i.test(body)){
+   token=await navoEnsureMasterSession(true);
+   response=await doFetch(token);
+  }
+ }
+ return response;
+};
+
 window.navoV72={request,ROOT,KEY,getAuth:()=>auth,getMaster:()=>masterProfile,getSession:()=>masterSession,show,catalog,masterEditLoad,masterBookings,bookings};
 el('md-password-open').onclick=()=>{el('md-password-panel').classList.toggle('hide');};
 el('md-password-save').onclick=async()=>{
@@ -1663,4 +1713,30 @@ body.navo-modal-open{overflow:hidden}
 .navo-profile-modal:not([hidden]):not(.hidden){display:flex!important;visibility:visible!important}
 #navo-profile-panel-schedule,#navo-profile-panel-personal,#navo-profile-panel-gallery,
 #navo-profile-panel-services,#navo-profile-panel-wallet,#navo-profile-panel-security{max-width:100%;min-width:0}
+</style><style id="navo-master-profile-compact-800">
+@media(max-width:600px){
+ #masterProfileTab{padding:8px 14px 78px!important;min-height:0!important}
+ #navo-master-profile-screen>h2{font-size:21px!important;line-height:1.15!important;margin:0 0 8px!important}
+ #navo-master-profile-screen .navo-profile-identity{gap:1px!important;margin:0 0 9px!important}
+ #navo-profile-avatar{width:62px!important;height:62px!important;margin:0!important}
+ #navo-profile-display-name{font-size:17px!important}
+ #navo-profile-rating{font-size:12px!important}
+ #navo-profile-review-status{font-size:11px!important;padding:2px 8px!important}
+ #navo-master-profile-screen .navo-profile-shift{padding:8px 10px!important;margin:0 0 10px!important;min-height:48px!important;border-radius:13px!important}
+ #navo-emergency-dayoff{min-height:32px!important;padding:5px 7px!important;font-size:10px!important}
+ #navo-shift-label{font-size:11px!important}
+ #navo-profile-menu{gap:6px!important}
+ #navo-profile-menu .navo-profile-menu-item{min-height:52px!important;height:auto!important;padding:7px 11px!important;gap:10px!important;border-radius:12px!important;box-shadow:0 2px 8px #0000000b!important}
+ #navo-profile-menu .navo-profile-icon{flex-basis:26px!important;font-size:19px!important}
+ #navo-profile-menu .navo-profile-item-text{gap:1px!important}
+ #navo-profile-menu .navo-profile-item-text strong{font-size:13px!important;line-height:1.15!important}
+ #navo-profile-menu .navo-profile-item-text small{font-size:10px!important;line-height:1.1!important}
+ #navo-profile-menu .navo-profile-chevron{font-size:21px!important}
+ #navo-profile-logout{min-height:32px!important;margin:5px 0 0!important;padding:7px!important;font-size:12px!important}
+}
+@media(max-width:600px) and (max-height:740px){
+ #navo-master-profile-screen .navo-profile-identity{margin-bottom:5px!important}
+ #navo-profile-menu .navo-profile-menu-item{min-height:47px!important;padding:5px 10px!important}
+ #navo-profile-menu{gap:5px!important}
+}
 </style></body></html>
