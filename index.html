@@ -1780,4 +1780,25 @@ body.navo-modal-open{overflow:hidden}
  #navo-master-profile-screen #navo-emergency-dayoff{font-size:8px!important;max-width:108px!important}
  #navo-master-profile-screen #navo-shift-label{font-size:8px!important}
 }
+</style><style id="navo-sticky-master-detail-and-tabs-20261108">
+/* Master public profile: identity remains visible while the booking form scrolls. */
+@media(max-width:650px){
+ #catalog.navo-master-detail-open .navo-selected-master-profile{
+ position:sticky!important;top:0!important;z-index:110!important;
+ display:flex!important;align-items:center!important;gap:10px!important;
+ min-height:65px!important;padding:7px 11px!important;margin:0 0 8px!important;
+ background:rgba(255,255,255,.97)!important;box-shadow:0 3px 12px #143d2c1c!important;
+ border-radius:0 0 12px 12px!important;backdrop-filter:blur(8px)
+ }
+ #catalog.navo-master-detail-open .navo-selected-master-avatar{
+ width:48px!important;height:48px!important;min-width:48px!important;flex:0 0 48px!important
+ }
+ #catalog.navo-master-detail-open .navo-selected-master-avatar img{width:100%!important;height:100%!important;object-fit:cover!important}
+ #catalog.navo-master-detail-open .navo-selected-master-info{min-width:0!important;flex:1!important}
+ #catalog.navo-master-detail-open .navo-selected-master-info h3{font-size:15px!important;margin:0!important}
+ #catalog.navo-master-detail-open .navo-selected-master-info p{font-size:11px!important;margin:2px 0!important}
+ #catalog.navo-master-detail-open .navo-selected-master-rating{font-size:10px!important}
+ #navo-bookings-segments{display:flex!important;flex-wrap:nowrap!important;gap:4px!important}
+ #navo-bookings-segments button{white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;min-width:0!important;flex:1!important;font-size:11px!important;padding:8px 4px!important}
+}
 </style></body></html>
