@@ -1595,7 +1595,7 @@ if(location.hash.includes('type=recovery')||location.hash.includes('error_descri
 el('logout').onclick=async()=>{sessionStorage.removeItem('master_authenticated');localStorage.removeItem('navo_role');const old=auth;auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);try{await request('/auth/v1/logout',null,old?.access_token)}catch(e){}location.replace(location.pathname+'?client=1&logout=1')};
 (async()=>{auth=load();if(auth?.access_token){try{await enter()}catch(e){console.warn('NAVO session restore:',e);const message=String(e.message||e);if(/invalid.*token|refresh.*invalid|user.*not.*found|session.*revoked/i.test(message)){auth=null;localStorage.removeItem(AK);sessionStorage.removeItem(AK);msg('Вход истёк. Для продолжения требуется подтверждение телефона.')}else{el('login').classList.remove('hide');msg('Не удалось восстановить вход из-за временной ошибки. Не заказывайте SMS повторно: проверьте соединение и обновите страницу.')}}}})();
 })();
-</script><script src="./navo-prices-v72.js?v=2.0" defer></script><script src="./navo-booking-v73.js?v=20261108-chat-booking-fix-681fca2" defer></script><script src="./navo-inbox-v78.js?v=20261108chatfix" defer></script><script>
+</script><script src="./navo-prices-v72.js?v=2.0" defer></script><script src="./navo-booking-v73.js?v=20261108-chat-realtime-cc004ada" defer></script><script src="./navo-inbox-v78.js?v=20261108chatfix" defer></script><script>
 (()=>{'use strict';
 async function refreshNavoFees(){
  const el=document.getElementById('navo-wallet-fee-summary'),s=window.navoV72?.getSession?.();if(!el||!s?.access_token)return;
@@ -1827,5 +1827,20 @@ body.navo-modal-open{overflow:hidden}
 #navo-master-profile-screen #navo-profile-menu{gap:6px!important}
 #navo-master-profile-screen #navo-profile-menu .navo-profile-menu-item{height:49px!important;min-height:49px!important;max-height:49px!important;padding:6px 9px!important}
 #navo-master-profile-screen #navo-profile-logout{margin:5px 0 0!important}
+}
+</style><style id="navo-chat-safe-areas-20261108">
+@media(max-width:700px){
+.navo-chat-fullscreen .navo-messenger-head{box-sizing:border-box!important;padding: max(12px, env(safe-area-inset-top)) 12px 9px!important;display:flex!important;align-items:center!important;gap:9px!important;min-height:78px!important}
+.navo-chat-fullscreen .navo-chat-back{flex:0 0 36px!important;width:36px!important;height:36px!important;margin:0!important}
+.navo-chat-fullscreen .navo-chat-avatar{width:40px!important;height:40px!important;min-width:40px!important;flex:0 0 40px!important;margin:0!important;border-radius:50%!important}
+.navo-chat-fullscreen .navo-chat-contact{min-width:0!important;flex:1!important;overflow:hidden!important}
+.navo-chat-fullscreen .navo-messenger-heading{font-size:16px!important;line-height:1.2!important;white-space:nowrap!important;text-overflow:ellipsis!important;overflow:hidden!important}
+.navo-chat-fullscreen .navo-messenger-subtitle{font-size:11px!important;line-height:1.3!important;max-height:30px!important;overflow:hidden!important}
+.navo-chat-fullscreen .navo-chat-phone{display:none!important}
+.navo-chat-fullscreen .navo-messenger-call{flex:0 0 36px!important;width:36px!important;height:36px!important}
+.navo-chat-fullscreen .navo-messenger-composer{box-sizing:border-box!important;padding:8px 10px max(10px, env(safe-area-inset-bottom))!important;gap:8px!important;align-items:center!important;background:white!important}
+.navo-chat-fullscreen .navo-messenger-quick{box-sizing:border-box!important;padding:5px 8px!important;gap:6px!important;background:white!important}
+.navo-chat-fullscreen .navo-messenger-quick button{font-size:11px!important;padding:6px 9px!important;white-space:nowrap!important}
+.navo-chat-fullscreen .navo-chat-input{min-width:0!important;flex:1!important}
 }
 </style></body></html>
