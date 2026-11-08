@@ -1968,4 +1968,38 @@ body>details.navo-chat.navo-chat-fullscreen .navo-messenger-composer{padding-bot
  #navo-master-profile-screen #navo-profile-menu{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:7px!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
  #navo-master-profile-screen #navo-profile-menu .navo-profile-menu-item{box-sizing:border-box!important;display:flex!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:65px!important;margin:0!important;padding:10px 13px!important;flex-shrink:0!important}
 }
-</style></body></html>
+</style><style id="navo-profile-rating-inside-identity-20261108">
+@media(max-width:700px){
+ #masterProfileTab{padding-top:0!important}
+ #navo-master-profile-screen>h2{display:none!important}
+ #navo-master-profile-screen>.navo-profile-compact-head{height:auto!important;min-height:72px!important;max-height:none!important;padding:7px 10px!important;margin:0 0 5px!important}
+ #navo-master-profile-screen .navo-profile-compact-details{min-width:0!important;flex:1!important}
+ #navo-master-profile-screen .navo-identity-rating-inline{font-size:11px!important;line-height:1.2!important;color:#a07824!important;white-space:normal!important;margin:2px 0!important}
+ #navo-master-profile-screen .navo-profile-scroll-content{padding-top:0!important}
+}
+</style>
+<script id="navo-profile-rating-relocate-20261108">
+(function(){
+ function relocate(){
+  const tab=document.getElementById('masterProfileTab');
+  const head=document.querySelector('#navo-master-profile-screen > .navo-profile-compact-head');
+  if(!tab||!head)return;
+  const details=head.querySelector('.navo-profile-compact-details')||head;
+  const nodes=[...tab.querySelectorAll('p,div,span,strong')];
+  for(const node of nodes){
+   if(head.contains(node)||node.closest('.navo-profile-modal'))continue;
+   if(node.children.length>0)continue;
+   const value=(node.textContent||'').trim();
+   if(!/Рейтинг мастера\s*:/i.test(value)||value.length>130)continue;
+   node.classList.add('navo-identity-rating-inline');
+   details.appendChild(node);
+  }
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',relocate,{once:true});else relocate();
+ const obs=new MutationObserver(()=>{relocate()});
+ document.addEventListener('DOMContentLoaded',()=>{
+  const tab=document.getElementById('masterProfileTab');
+  if(tab)obs.observe(tab,{childList:true,subtree:true});
+ },{once:true});
+})();
+</script></body></html>
