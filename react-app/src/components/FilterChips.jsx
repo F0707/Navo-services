@@ -1,0 +1,1 @@
+const districts=['Все','Сино','И. Сомони','Шохмансур','Фирдавси'];export default function FilterChips({selected,onSelect}){return <div className="chips" role="group" aria-label="Районы Душанбе">{districts.map(d=><button key={d} className={'chip '+(selected===d?'selected':'')} onClick={()=>onSelect(d)}>{d}</button>)}</div>}
