@@ -1,1 +1,1 @@
-export default function Navbar(){return <nav className="bottom-nav"><span className="active">Каталог</span><span>Записи</span><span>Избранное</span><span>Профиль</span></nav>}
+export default function Navbar({active,onSelect}){return <nav className="bottom-nav" aria-label="Главная навигация">{['Каталог','Записи','Избранное','Профиль'].map(name=><button type="button" key={name} className={active===name?'active':''} onClick={()=>onSelect(name)}>{name}</button>)}</nav>}
