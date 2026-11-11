@@ -1,0 +1,3 @@
+import {supabase} from './supabaseClient';
+export async function loadMessages(bookingId){const {data,error}=await supabase.from('navo_booking_messages').select('id,booking_id,sender_id,body,created_at').eq('booking_id',bookingId).order('created_at',{ascending:true});if(error)throw error;return data||[]}
+export function subscribeMessages(bookingId,onMessage){const channel=supabase.channel('navo-chat-'+bookingId).on('postgres_changes',{event:'INSERT',schema:'public',table:'navo_booking_messages',filter:'booking_id=eq.'+bookingId},payload=>onMessage(payload.new)).subscribe();return()=>{void supabase.removeChannel(channel)}}
